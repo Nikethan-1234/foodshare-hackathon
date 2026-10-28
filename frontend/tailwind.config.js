@@ -1,0 +1,81 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        green: {
+          50:  "#f0faf4",
+          100: "#d9f2e3",
+          200: "#b4e4c8",
+          300: "#7dcca5",
+          400: "#47ae7e",
+          500: "#268f61",
+          600: "#1a7a52",   // primary
+          700: "#166344",
+          800: "#144f37",
+          900: "#11412e",
+          950: "#0a2a1e",
+        },
+        grey: {
+          50:  "#f9fafb",
+          100: "#f3f4f6",
+          200: "#e5e7eb",
+          300: "#d1d5db",
+          400: "#9ca3af",
+          500: "#6b7280",
+          600: "#4b5563",
+          700: "#374151",
+          800: "#1f2937",
+          900: "#111827",
+        },
+        status: {
+          available: { bg: "#f0faf4", text: "#166344", border: "#b4e4c8" },
+          reserved:  { bg: "#fffbeb", text: "#92400e", border: "#fde68a" },
+          completed: { bg: "#f0f9ff", text: "#0c4a6e", border: "#bae6fd" },
+          expired:   { bg: "#f9fafb", text: "#6b7280", border: "#e5e7eb" },
+          removed:   { bg: "#fff1f2", text: "#881337", border: "#fecdd3" },
+          pending:   { bg: "#fffbeb", text: "#92400e", border: "#fde68a" },
+          accepted:  { bg: "#f0faf4", text: "#166344", border: "#b4e4c8" },
+          rejected:  { bg: "#fff1f2", text: "#881337", border: "#fecdd3" },
+          cancelled: { bg: "#f9fafb", text: "#6b7280", border: "#e5e7eb" },
+        },
+      },
+      fontFamily: {
+        sans: ["Inter", "system-ui", "sans-serif"],
+      },
+      fontSize: {
+        xs:   ["12px", { lineHeight: "16px" }],
+        sm:   ["14px", { lineHeight: "20px" }],
+        base: ["16px", { lineHeight: "24px" }],
+        lg:   ["20px", { lineHeight: "28px" }],
+        xl:   ["28px", { lineHeight: "36px" }],
+      },
+      spacing: {
+        1: "4px",
+        2: "8px",
+        3: "12px",
+        4: "16px",
+        5: "20px",
+        6: "24px",
+        7: "28px",
+        8: "32px",
+        10: "40px",
+        12: "48px",
+        14: "56px",
+        16: "64px",
+      },
+      borderRadius: {
+        DEFAULT: "6px",
+        none: "0",
+        full: "9999px",
+      },
+      boxShadow: {
+        sm: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        DEFAULT: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+        md: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+      },
+    },
+  },
+  plugins: [],
+};
