@@ -122,19 +122,50 @@ stateDiagram-v2
 
 ---
 
-## 4. Demo Credentials
+## 4. Demo Credentials & Donor Types
 
 All demo accounts share the password: `demo1234`
 
-| Role | Account Email | Organization | Type |
-|---|---|---|---|
-| **Admin** | `admin@demo.local` | Platform Administration | Platform Moderator |
-| **Donor** | `donor@demo.local` | Green Leaf Restaurant | Mediterranean Restaurant |
-| **Donor** | `donor2@demo.local` | City Catering Co. | Corporate Event Catering |
-| **Donor** | `donor3@demo.local` | Sunrise Bakery | Artisan Bakery |
-| **Recipient** | `recipient@demo.local` | Hope Community Kitchen | Soup Kitchen & Shelter |
-| **Recipient** | `recipient2@demo.local` | Springfield Food Bank | Regional Food Bank |
-| **Recipient** | `recipient3@demo.local` | Shelter First Network | Emergency Housing Shelter |
+| Role | Donor Type | Account Email | Name / Organization | Focus / Notes |
+|---|---|---|---|---|
+| **Admin** | N/A | `admin@demo.local` | Platform Administration | Moderation, approve/reject individual listings, reports |
+| **Donor** | `RESTAURANT` | `donor@demo.local` | Green Leaf Restaurant | Commercial restaurant surplus |
+| **Donor** | `RESTAURANT` | `donor2@demo.local` | City Catering Co. | Corporate event surpluses |
+| **Donor** | `RESTAURANT` | `donor3@demo.local` | Sunrise Bakery | End-of-day bread and pastry surplus |
+| **Donor** | `INSTITUTION` | `inst1@demo.local` | St. Andrew's Church | Sunday community meal surplus |
+| **Donor** | `INSTITUTION` | `inst2@demo.local` | Springfield College Canteen | Campus cafeteria lunch surplus |
+| **Donor** | `INDIVIDUAL` | `indiv1@demo.local` | Ravi Patel | Home function leftovers (phone unverified for demo OTP testing) |
+| **Donor** | `INDIVIDUAL` | `indiv2@demo.local` | Meena Krishnamurthy | Wedding function sweets/snacks (phone verified) |
+| **Recipient** | N/A | `recipient@demo.local` | Hope Community Kitchen | Soup kitchen & hot meals |
+| **Recipient** | N/A | `recipient2@demo.local` | Springfield Food Bank | High-capacity regional distribution |
+| **Recipient** | N/A | `recipient3@demo.local` | Shelter First Network | Emergency housing shelter network |
+
+---
+
+## 5. Trust & Safety Rules for Individuals (Phase 2)
+
+To ensure community safety while enabling households and function hosts to donate surplus food, the platform enforces:
+
+1. **Simulated Phone OTP Verification:**
+   - Individuals must verify their phone number via a demo OTP (`123456`) before posting listings.
+   - Verified donor phones are kept private and shared only after a charity pickup request is accepted.
+2. **Minimum Quantity Enforcement:**
+   - Individual listings must offer at least **10 servings** (`INDIVIDUAL_MIN_QUANTITY = 10`) to guarantee bulk redistribution viability.
+3. **4-Hour Cooked Food Freshness Window:**
+   - Cooked food must be listed within **4 hours of preparation** (`MAX_COOKED_HOURS_BEFORE_LISTING = 4`). Older items are blocked with clear validation feedback.
+4. **Mandatory 4-Point Food Handling Checklist:**
+   - Every listing requires all 4 hygiene criteria to be confirmed:
+     - Covered in food-grade containers / foil.
+     - Kept at safe holding temperature (&gt;60°C hot or &lt;5°C refrigerated).
+     - Not repeatedly reheated or cooled in cycles.
+     - Packaged cleanly with clean utensils in a sanitary kitchen.
+5. **Donor Trust Levels & Administrator Moderation:**
+   - **New Individuals (< 3 completed donations):** Listings are placed in `PENDING_APPROVAL` and withheld from search results until reviewed by an administrator.
+   - **Verified Individuals (3+ completed donations):** Listings are auto-approved directly to `AVAILABLE`.
+   - Administrators can review, inspect full audit history, and **Approve** or **Reject** pending listings via the admin moderation panel.
+6. **Recipient Request Rejections & Listing Reports:**
+   - Recipients can cancel or reject their pickup requests with an optional reason.
+   - Suspicious or unhygienic listings can be reported directly from the browse/detail view with categorized reasons appearing in `/admin/reports`.
 
 > [!TIP]
 > The sign-in page (`/login`) includes **1-click quick-fill buttons** for Donor, Recipient, and Admin accounts.

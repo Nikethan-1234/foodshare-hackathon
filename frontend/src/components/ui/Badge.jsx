@@ -1,6 +1,7 @@
 import { clsx } from "../../utils/clsx";
 
 const STATUS_STYLES = {
+  PENDING_APPROVAL: "bg-purple-50 text-purple-800 border-purple-200",
   AVAILABLE: "bg-green-50 text-green-700 border-green-200",
   RESERVED:  "bg-amber-50 text-amber-800 border-amber-200",
   COMPLETED: "bg-sky-50 text-sky-800 border-sky-200",
@@ -17,6 +18,7 @@ const STATUS_STYLES = {
 };
 
 const STATUS_DOTS = {
+  PENDING_APPROVAL: "bg-purple-600",
   AVAILABLE: "bg-green-600",
   RESERVED:  "bg-amber-600",
   COMPLETED: "bg-sky-600",
@@ -33,6 +35,7 @@ const STATUS_DOTS = {
 };
 
 const STATUS_LABELS = {
+  PENDING_APPROVAL: "Pending Approval",
   AVAILABLE: "Available",
   RESERVED:  "Reserved",
   COMPLETED: "Completed",

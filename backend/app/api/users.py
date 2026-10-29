@@ -56,6 +56,61 @@ def update_profile():
     return jsonify({"profile": profile.to_dict()}), 200
 
 
+@users_bp.route("/phone/send-otp", methods=["POST"])
+@active_user_required
+def send_phone_otp():
+    """
+    Simulated phone OTP verification for individual donors.
+    Returns fixed demo code clearly labeled as demo.
+    """
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    profile = user.profile
+    if not profile or not profile.phone:
+        return jsonify({
+            "error": "Phone number not found in profile. Please enter your phone number first."
+        }), 400
+
+    DEMO_OTP = "123456"
+    return jsonify({
+        "message": f"Demo OTP sent to {profile.phone}. Enter demo code {DEMO_OTP} to verify.",
+        "otp_code": DEMO_OTP,
+        "is_demo": True,
+        "phone": profile.phone,
+    }), 200
+
+
+@users_bp.route("/phone/verify-otp", methods=["POST"])
+@active_user_required
+def verify_phone_otp():
+    """
+    Verify phone using simulated OTP.
+    """
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    profile = user.profile
+    if not profile:
+        return jsonify({"error": "Profile not found."}), 404
+
+    data = request.get_json() or {}
+    otp = str(data.get("otp", "")).strip()
+
+    DEMO_OTP = "123456"
+    if otp != DEMO_OTP:
+        return jsonify({
+            "error": f"Invalid verification code. Please enter the demo code: {DEMO_OTP}"
+        }), 422
+
+    profile.phone_verified = True
+    db.session.commit()
+
+    return jsonify({
+        "message": "Phone number verified successfully (Demo verification).",
+        "phone_verified": True,
+        "profile": profile.to_dict(),
+    }), 200
+
+
 @users_bp.route("/", methods=["GET"])
 @role_required("admin")
 def list_users():

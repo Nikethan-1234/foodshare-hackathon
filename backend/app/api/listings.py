@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import get_jwt_identity
 from app import db
 from app.models import Listing, Request, StatusHistory, User
@@ -62,6 +62,30 @@ def validate_listing_payload(data, is_create=True):
     if p_end and use_by and p_end > use_by:
         errors["pickup_end"] = "Pickup window cannot end after the food use-by date."
 
+    # Phase 2: Cooked food time limit check
+    if is_create and prep_at:
+        max_cooked_hours = current_app.config.get("MAX_COOKED_HOURS_BEFORE_LISTING", 4)
+        hours_ago = (datetime.utcnow() - prep_at).total_seconds() / 3600.0
+        if hours_ago > max_cooked_hours:
+            errors["prepared_at"] = f"Cooked food must be listed within {max_cooked_hours} hours of preparation for food safety. (Prepared {round(hours_ago, 1)} hours ago)."
+
+    # Phase 2: Handling safety checklist (all 4 required when provided)
+    checklist = data.get("handling_checklist")
+    if checklist is not None:
+        covered = bool(checklist.get("covered", False))
+        stored_properly = bool(checklist.get("stored_properly", False))
+        not_reheated = bool(checklist.get("not_reheated", False))
+        packaged_cleanly = bool(checklist.get("packaged_cleanly", False))
+        if not (covered and stored_properly and not_reheated and packaged_cleanly):
+            errors["handling_checklist"] = "All food handling safety checklist boxes must be confirmed (covered, properly stored, not reheated, packaged cleanly)."
+    else:
+        if any(data.get(k) is False for k in ["is_covered", "is_stored_properly", "is_not_reheated", "is_packaged_cleanly"]):
+            errors["handling_checklist"] = "All food handling safety checklist boxes must be confirmed."
+        covered = True
+        stored_properly = True
+        not_reheated = True
+        packaged_cleanly = True
+
     raw_allergens = data.get("allergens")
     raw_dietary = data.get("dietary_tags")
     if raw_allergens is None and raw_dietary is None:
@@ -85,6 +109,10 @@ def validate_listing_payload(data, is_create=True):
         "pickup_end": p_end,
         "allergens": allergens_str,
         "dietary_tags": dietary_str,
+        "is_covered": covered,
+        "is_stored_properly": stored_properly,
+        "is_not_reheated": not_reheated,
+        "is_packaged_cleanly": packaged_cleanly,
     }
 
 
@@ -96,9 +124,47 @@ def create_listing():
     if not data:
         return jsonify({"error": "Request body must be JSON"}), 400
 
+    donor = User.query.get(user_id)
+    donor_profile = donor.profile if donor else None
+
+    # Phase 2: Individual Donor Rules
+    if donor_profile and donor_profile.donor_type == "INDIVIDUAL":
+        # Rule 1: Phone verification check
+        if not donor_profile.phone_verified:
+            return jsonify({
+                "error": "Phone verification is required before individual donors can post listings. Please verify your phone number (Demo OTP code: 123456)."
+            }), 403
+
+        # Rule 2: Minimum quantity check
+        min_qty = current_app.config.get("INDIVIDUAL_MIN_QUANTITY", 10)
+        req_qty = data.get("quantity_total")
+        try:
+            if req_qty is not None and int(req_qty) < min_qty:
+                return jsonify({
+                    "error": "Validation failed",
+                    "fields": {
+                        "quantity_total": f"Individual donors must list at least {min_qty} servings to ensure bulk redistribution efficiency."
+                    }
+                }), 422
+        except (ValueError, TypeError):
+            pass
+
     errors, parsed = validate_listing_payload(data, is_create=True)
     if errors:
         return jsonify({"error": "Validation failed", "fields": errors}), 422
+
+    # Phase 2: Trust level calculation for Individuals
+    if donor_profile and donor_profile.donor_type == "INDIVIDUAL":
+        completed_donations = Listing.query.filter_by(donor_id=user_id, status="COMPLETED").count()
+        if completed_donations < 3:
+            initial_status = "PENDING_APPROVAL"
+            status_note = f"First-time individual listing submitted for safety approval (Trust level: {completed_donations}/3 completed donations)"
+        else:
+            initial_status = "AVAILABLE"
+            status_note = "Individual listing auto-approved (Trust level: verified donor with 3+ completed donations)"
+    else:
+        initial_status = "AVAILABLE"
+        status_note = "Listing created by verified organization donor"
 
     listing = Listing(
         donor_id=user_id,
@@ -112,9 +178,13 @@ def create_listing():
         pickup_location=parsed["pickup_location"],
         pickup_start=parsed["pickup_start"],
         pickup_end=parsed["pickup_end"],
-        status="AVAILABLE",
+        status=initial_status,
         allergens=parsed.get("allergens", ""),
         dietary_tags=parsed.get("dietary_tags", ""),
+        is_covered=parsed.get("is_covered", True),
+        is_stored_properly=parsed.get("is_stored_properly", True),
+        is_not_reheated=parsed.get("is_not_reheated", True),
+        is_packaged_cleanly=parsed.get("is_packaged_cleanly", True),
     )
     db.session.add(listing)
     db.session.flush()
@@ -123,9 +193,9 @@ def create_listing():
         entity_type="listing",
         entity_id=listing.id,
         from_status=None,
-        to_status="AVAILABLE",
+        to_status=initial_status,
         actor_id=user_id,
-        note="Listing created by donor",
+        note=status_note,
     )
     db.session.add(status_entry)
     db.session.commit()

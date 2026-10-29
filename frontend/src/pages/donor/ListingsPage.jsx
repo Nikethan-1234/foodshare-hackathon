@@ -20,6 +20,7 @@ import {
 
 const STATUS_FILTERS = [
   { id: "ALL", label: "All" },
+  { id: "PENDING_APPROVAL", label: "Pending Approval" },
   { id: "AVAILABLE", label: "Available" },
   { id: "RESERVED", label: "Reserved" },
   { id: "COMPLETED", label: "Completed" },
@@ -471,6 +472,15 @@ export default function DonorListingsPage() {
               </div>
               <StatusBadge status={fullDetail.status} />
             </div>
+
+            {fullDetail.status === "PENDING_APPROVAL" && (
+              <div className="p-3 bg-purple-50 border border-purple-200 rounded text-xs text-purple-900 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-purple-700 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong>Awaiting Administrator Review:</strong> As part of our trust and safety policy for individual donors, initial listings undergo moderator review before being published to local charities.
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3 text-xs bg-grey-50 p-3 rounded border border-grey-200">
               <div>

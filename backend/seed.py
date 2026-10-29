@@ -80,6 +80,7 @@ DONORS = [
         "password": "demo1234",
         "role": "donor",
         "donor_type": "INDIVIDUAL",
+        "phone_verified": False,   # For testing simulated OTP flow
         "organization_name": "Ravi Patel",   # auto-set from contact_name for individuals
         "contact_name": "Ravi Patel",
         "phone": "+1-555-0401",
@@ -91,6 +92,7 @@ DONORS = [
         "password": "demo1234",
         "role": "donor",
         "donor_type": "INDIVIDUAL",
+        "phone_verified": True,
         "organization_name": "Meena Krishnamurthy",
         "contact_name": "Meena Krishnamurthy",
         "phone": "+1-555-0402",
@@ -314,7 +316,7 @@ LISTINGS_DATA = [
         "pickup_location": "33 Birch Close, Springfield — front door",
         "pickup_start": now + timedelta(minutes=30),
         "pickup_end": now + timedelta(hours=2),
-        "status": "AVAILABLE",
+        "status": "PENDING_APPROVAL",
         "donor_index": 5,
     },
     {
@@ -356,6 +358,7 @@ def seed():
                 address=d["address"],
                 description=d["description"],
                 donor_type=d.get("donor_type", "RESTAURANT"),
+                phone_verified=d.get("phone_verified", True),
             )
             db.session.add(p)
             donor_users.append(u)

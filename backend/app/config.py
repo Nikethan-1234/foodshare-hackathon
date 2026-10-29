@@ -15,6 +15,9 @@ class Config:
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "jwt-secret-key-change-in-production")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*").split(",")
+    # Phase 2: Trust and safety rules
+    INDIVIDUAL_MIN_QUANTITY = int(os.environ.get("INDIVIDUAL_MIN_QUANTITY", 10))
+    MAX_COOKED_HOURS_BEFORE_LISTING = int(os.environ.get("MAX_COOKED_HOURS_BEFORE_LISTING", 4))
 
 
 class TestConfig(Config):

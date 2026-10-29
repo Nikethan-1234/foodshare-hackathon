@@ -5,7 +5,7 @@ import api from "../../utils/api";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input, Textarea } from "../../components/ui/Input";
-import { StatusBadge } from "../../components/ui/Badge";
+import { StatusBadge, DonorTypeBadge } from "../../components/ui/Badge";
 import { Table, Thead, Th, Tbody, Tr, Td } from "../../components/ui/Table";
 import { Modal } from "../../components/ui/Modal";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -15,11 +15,12 @@ import { PickupCountdown } from "../../components/ui/PickupCountdown";
 import { formatDateTime } from "../../utils/format";
 import {
   Search, Package, Building2, MapPin, AlertTriangle,
-  Eye, XCircle, ShieldAlert, CheckCircle2
+  Eye, XCircle, ShieldAlert, CheckCircle2, Check
 } from "lucide-react";
 
 const STATUS_FILTERS = [
   { id: "ALL", label: "All Listings" },
+  { id: "PENDING_APPROVAL", label: "Pending Approval" },
   { id: "AVAILABLE", label: "Available" },
   { id: "RESERVED", label: "Reserved" },
   { id: "COMPLETED", label: "Completed" },
@@ -46,6 +47,39 @@ export default function AdminListingsPage() {
   const [detailTarget, setDetailTarget] = useState(null);
   const [detailData, setDetailData] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [actionProcessingId, setActionProcessingId] = useState(null);
+
+  const handleApproveListing = async (listingId) => {
+    setActionProcessingId(listingId);
+    try {
+      await api.post(`/admin/listings/${listingId}/approve`);
+      toast({ message: `Listing #${listingId} approved and is now public!`, type: "success" });
+      if (detailData && detailData.id === listingId) {
+        setDetailData((prev) => ({ ...prev, status: "AVAILABLE" }));
+      }
+      fetchListings();
+    } catch (err) {
+      toast({ message: err.response?.data?.error || "Failed to approve listing.", type: "error" });
+    } finally {
+      setActionProcessingId(null);
+    }
+  };
+
+  const handleRejectListing = async (listingId) => {
+    setActionProcessingId(listingId);
+    try {
+      await api.post(`/admin/listings/${listingId}/reject`, { reason: "Moderator safety review reject." });
+      toast({ message: `Listing #${listingId} rejected and removed.`, type: "success" });
+      if (detailData && detailData.id === listingId) {
+        setDetailData((prev) => ({ ...prev, status: "REMOVED" }));
+      }
+      fetchListings();
+    } catch (err) {
+      toast({ message: err.response?.data?.error || "Failed to reject listing.", type: "error" });
+    } finally {
+      setActionProcessingId(null);
+    }
+  };
 
   const fetchListings = async () => {
     setIsLoading(true);
@@ -240,20 +274,43 @@ export default function AdminListingsPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </button>
-                          {canRemove && (
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => {
-                                setRemoveTarget(l);
-                                setRemovalReason("");
-                                setRemovalError("");
-                              }}
-                              title="Administrative removal"
-                            >
-                              <XCircle className="h-3.5 w-3.5" />
-                              Remove
-                            </Button>
+                          {l.status === "PENDING_APPROVAL" ? (
+                            <>
+                              <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                                onClick={() => handleApproveListing(l.id)}
+                                isLoading={actionProcessingId === l.id}
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                                Approve
+                              </Button>
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() => handleRejectListing(l.id)}
+                                isLoading={actionProcessingId === l.id}
+                              >
+                                <XCircle className="h-3.5 w-3.5" />
+                                Reject
+                              </Button>
+                            </>
+                          ) : (
+                            canRemove && (
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() => {
+                                  setRemoveTarget(l);
+                                  setRemovalReason("");
+                                  setRemovalError("");
+                                }}
+                                title="Administrative removal"
+                              >
+                                <XCircle className="h-3.5 w-3.5" />
+                                Remove
+                              </Button>
+                            )
                           )}
                         </div>
                       </Td>
@@ -288,7 +345,7 @@ export default function AdminListingsPage() {
                     Quantity: {l.quantity_left} of {l.quantity_total} {l.unit} • {l.requests_count} request(s)
                   </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-grey-100">
+                  <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-grey-100">
                     <Button
                       variant="secondary"
                       size="sm"
@@ -297,19 +354,42 @@ export default function AdminListingsPage() {
                       <Eye className="h-3.5 w-3.5" />
                       Inspect
                     </Button>
-                    {canRemove && (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => {
-                          setRemoveTarget(l);
-                          setRemovalReason("");
-                          setRemovalError("");
-                        }}
-                      >
-                        <XCircle className="h-3.5 w-3.5" />
-                        Remove
-                      </Button>
+                    {l.status === "PENDING_APPROVAL" ? (
+                      <>
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          onClick={() => handleApproveListing(l.id)}
+                          isLoading={actionProcessingId === l.id}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          Approve
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleRejectListing(l.id)}
+                          isLoading={actionProcessingId === l.id}
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                          Reject
+                        </Button>
+                      </>
+                    ) : (
+                      canRemove && (
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => {
+                            setRemoveTarget(l);
+                            setRemovalReason("");
+                            setRemovalError("");
+                          }}
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                          Remove
+                        </Button>
+                      )
                     )}
                   </div>
                 </Card>
@@ -381,15 +461,47 @@ export default function AdminListingsPage() {
         title="Admin Inspection & Audit Trail"
         size="lg"
         footer={
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setDetailTarget(null);
-              setDetailData(null);
-            }}
-          >
-            Close
-          </Button>
+          detailData?.status === "PENDING_APPROVAL" ? (
+            <div className="flex items-center justify-between w-full">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setDetailTarget(null);
+                  setDetailData(null);
+                }}
+              >
+                Close
+              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => handleApproveListing(detailData.id)}
+                  isLoading={actionProcessingId === detailData.id}
+                >
+                  <Check className="h-4 w-4" />
+                  Approve Listing
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => handleRejectListing(detailData.id)}
+                  isLoading={actionProcessingId === detailData.id}
+                >
+                  <XCircle className="h-4 w-4" />
+                  Reject Listing
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setDetailTarget(null);
+                setDetailData(null);
+              }}
+            >
+              Close
+            </Button>
+          )
         }
       >
         {detailLoading ? (

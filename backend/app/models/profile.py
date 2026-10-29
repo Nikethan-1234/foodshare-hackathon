@@ -17,6 +17,7 @@ class Profile(db.Model):
     description = db.Column(db.Text)
     # donor_type: RESTAURANT | INSTITUTION | INDIVIDUAL (null for recipients/admins)
     donor_type = db.Column(db.String(20), nullable=True)
+    phone_verified = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -32,5 +33,6 @@ class Profile(db.Model):
             "address": self.address,
             "description": self.description,
             "donor_type": self.donor_type,
+            "phone_verified": self.phone_verified,
             "created_at": self.created_at.isoformat(),
         }

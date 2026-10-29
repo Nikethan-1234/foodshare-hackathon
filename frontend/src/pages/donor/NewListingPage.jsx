@@ -8,7 +8,10 @@ import { Input, Textarea } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
 import { Button } from "../../components/ui/Button";
 import { toDateTimeLocal } from "../../utils/format";
-import { ArrowLeft, Clock, MapPin, Package, ShieldAlert, Sparkles, Camera, CheckCircle2 } from "lucide-react";
+import {
+  ArrowLeft, Clock, MapPin, Package, ShieldAlert, Sparkles,
+  Camera, CheckCircle2, ShieldCheck, Phone, AlertCircle, CheckSquare
+} from "lucide-react";
 
 const UNIT_OPTIONS = [
   { value: "servings", label: "Servings / Portions" },
@@ -21,19 +24,21 @@ const UNIT_OPTIONS = [
 
 export default function NewListingPage() {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, updateProfile } = useAuth();
   const { toast } = useToast();
+
+  const isIndividual = profile?.donor_type === "INDIVIDUAL";
 
   const now = new Date();
   const prepDefault = new Date(now.getTime() - 60 * 60 * 1000); // 1 hour ago
-  const pickupStartDefault = new Date(now.getTime() + 60 * 60 * 1000); // +1 hour
-  const pickupEndDefault = new Date(now.getTime() + 4 * 60 * 60 * 1000); // +4 hours
-  const useByDefault = new Date(now.getTime() + 8 * 60 * 60 * 1000); // +8 hours
+  const pickupStartDefault = new Date(now.getTime() + 30 * 60 * 1000); // +30 mins
+  const pickupEndDefault = new Date(now.getTime() + 3 * 60 * 60 * 1000); // +3 hours
+  const useByDefault = new Date(now.getTime() + 6 * 60 * 60 * 1000); // +6 hours
 
   const [form, setForm] = useState({
     title: "",
     description: "",
-    quantity_total: "",
+    quantity_total: isIndividual ? "10" : "",
     unit: "servings",
     pickup_location: profile?.address || "",
     prepared_at: toDateTimeLocal(prepDefault),
@@ -41,6 +46,20 @@ export default function NewListingPage() {
     pickup_start: toDateTimeLocal(pickupStartDefault),
     pickup_end: toDateTimeLocal(pickupEndDefault),
   });
+
+  // Phase 2: Handling checklist (all 4 required)
+  const [checklist, setChecklist] = useState({
+    covered: false,
+    stored_properly: false,
+    not_reheated: false,
+    packaged_cleanly: false,
+  });
+
+  // Phase 2: Phone OTP verification state
+  const [otpInput, setOtpInput] = useState("");
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpSentNotice, setOtpSentNotice] = useState("");
 
   useEffect(() => {
     if (profile?.address && !form.pickup_location) {
@@ -52,6 +71,49 @@ export default function NewListingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAiScanning, setIsAiScanning] = useState(false);
   const [aiDetectedInfo, setAiDetectedInfo] = useState(null);
+
+  const handleSendOtp = async () => {
+    setIsSendingOtp(true);
+    setOtpSentNotice("");
+    try {
+      const res = await api.post("/users/phone/send-otp");
+      setOtpSentNotice(res.data.message || "Demo OTP: 123456");
+      setOtpInput("123456"); // Pre-populate demo code for smooth testing
+      toast({ message: "Demo OTP code generated: 123456", type: "success" });
+    } catch (err) {
+      toast({ message: err.response?.data?.error || "Failed to send OTP.", type: "error" });
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpInput.trim()) {
+      toast({ message: "Please enter the OTP code.", type: "error" });
+      return;
+    }
+    setIsVerifyingOtp(true);
+    try {
+      const res = await api.post("/users/phone/verify-otp", { otp: otpInput.trim() });
+      if (res.data.profile) {
+        updateProfile(res.data.profile);
+      }
+      toast({ message: "Phone number verified successfully (Demo)!", type: "success" });
+      setOtpSentNotice("");
+    } catch (err) {
+      toast({ message: err.response?.data?.error || "Invalid OTP code.", type: "error" });
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  const handleChecklistChange = (key) => (e) => {
+    const checked = e.target.checked;
+    setChecklist((prev) => ({ ...prev, [key]: checked }));
+    if (errors.handling_checklist) {
+      setErrors((prev) => ({ ...prev, handling_checklist: null }));
+    }
+  };
 
   const handleAiScan = async (presetKey, file = null) => {
     setIsAiScanning(true);
@@ -99,9 +161,14 @@ export default function NewListingPage() {
   const validate = () => {
     const errs = {};
     if (!form.title.trim()) errs.title = "Listing title is required.";
-    if (!form.quantity_total || Number(form.quantity_total) <= 0) {
+
+    const qty = Number(form.quantity_total);
+    if (!form.quantity_total || qty <= 0) {
       errs.quantity_total = "Quantity must be greater than 0.";
+    } else if (isIndividual && qty < 10) {
+      errs.quantity_total = "Individual donors must list a minimum of 10 servings to ensure bulk redistribution efficiency.";
     }
+
     if (!form.pickup_location.trim()) {
       errs.pickup_location = "Pickup location is required.";
     }
@@ -109,6 +176,15 @@ export default function NewListingPage() {
     if (!form.use_by) errs.use_by = "Use-by time is required.";
     if (!form.pickup_start) errs.pickup_start = "Pickup start time is required.";
     if (!form.pickup_end) errs.pickup_end = "Pickup end time is required.";
+
+    // Phase 2: Cooked food time limit (within 4 hours of prepared_at)
+    if (form.prepared_at) {
+      const prepDate = new Date(form.prepared_at);
+      const hoursSincePrep = (Date.now() - prepDate.getTime()) / (1000 * 60 * 60);
+      if (hoursSincePrep > 4) {
+        errs.prepared_at = `Cooked food must be listed within 4 hours of preparation for food safety (prepared ${Math.round(hoursSincePrep * 10) / 10} hours ago).`;
+      }
+    }
 
     if (form.prepared_at && form.use_by && new Date(form.prepared_at) > new Date(form.use_by)) {
       errs.use_by = "Use-by time cannot be earlier than preparation time.";
@@ -126,6 +202,16 @@ export default function NewListingPage() {
       }
     }
 
+    // Phase 2: Check all 4 safety checklist items
+    if (!checklist.covered || !checklist.stored_properly || !checklist.not_reheated || !checklist.packaged_cleanly) {
+      errs.handling_checklist = "All 4 food handling safety checklist boxes must be confirmed before posting.";
+    }
+
+    // Phase 2: Phone verification check for individuals
+    if (isIndividual && !profile?.phone_verified) {
+      errs.phone_verification = "Phone verification is required before individual donors can post listings.";
+    }
+
     return errs;
   };
 
@@ -134,7 +220,7 @@ export default function NewListingPage() {
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
-      toast({ message: "Please correct the errors in the form.", type: "error" });
+      toast({ message: "Please correct the safety and form validation errors.", type: "error" });
       return;
     }
 
@@ -149,10 +235,21 @@ export default function NewListingPage() {
         pickup_end: new Date(form.pickup_end).toISOString(),
         allergens: aiDetectedInfo?.allergens || undefined,
         dietary_tags: aiDetectedInfo?.dietary_tags || undefined,
+        handling_checklist: checklist,
+        is_covered: checklist.covered,
+        is_stored_properly: checklist.stored_properly,
+        is_not_reheated: checklist.not_reheated,
+        is_packaged_cleanly: checklist.packaged_cleanly,
       };
 
       const res = await api.post("/listings/", payload);
-      toast({ message: "Listing published successfully!", type: "success" });
+      const isPending = res.data.listing?.status === "PENDING_APPROVAL";
+      toast({
+        message: isPending
+          ? "Listing submitted! Sent to platform moderators for safety review."
+          : "Listing published successfully!",
+        type: "success",
+      });
       navigate("/donor/listings");
     } catch (err) {
       const res = err.response?.data;
@@ -179,16 +276,94 @@ export default function NewListingPage() {
         </Link>
         <h1 className="text-xl font-semibold text-grey-900">List Surplus Food</h1>
         <p className="text-sm text-grey-500">
-          Make surplus food available to certified recipient organizations.
+          Make surplus food available safely to certified recipient organizations.
         </p>
       </div>
 
+      {/* Safety Notice Banner */}
       <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800 flex items-start gap-2">
         <ShieldAlert className="h-4 w-4 mt-0.5 flex-shrink-0 text-amber-600" />
         <div>
-          <strong>Food Safety & Quality Notice:</strong> Ensure food was prepared in a hygienic kitchen, packaged in food-grade containers, and maintained within safe temperature guidelines.
+          <strong>Food Safety & Quality Notice:</strong> FoodShare is not a food safety certifier.
+          Ensure food was prepared cleanly, packaged in food-grade covered containers, and kept within safe temperature guidelines.
         </div>
       </div>
+
+      {/* Phase 2: Individual Donor Phone Verification Card */}
+      {isIndividual && !profile?.phone_verified && (
+        <Card className="mb-4 border-amber-300 bg-amber-50/40">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded bg-amber-100 text-amber-800 mt-0.5">
+              <Phone className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-grey-900">
+                Phone Verification Required (Demo)
+              </h3>
+              <p className="text-xs text-grey-600 mt-0.5">
+                To build trust and safety for community charities, individual donors must verify their phone number before listing food.
+              </p>
+              {profile?.phone && (
+                <p className="text-xs font-mono text-grey-500 mt-1">
+                  Registered number: <strong>{profile.phone}</strong>
+                </p>
+              )}
+
+              {otpSentNotice && (
+                <div className="mt-2 p-2 rounded bg-green-50 border border-green-200 text-xs text-green-800 font-medium">
+                  {otpSentNotice}
+                </div>
+              )}
+
+              {errors.phone_verification && (
+                <div className="mt-2 text-xs text-red-600 font-medium">
+                  {errors.phone_verification}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSendOtp}
+                  isLoading={isSendingOtp}
+                >
+                  Send Demo OTP
+                </Button>
+
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    placeholder="Enter code (123456)"
+                    value={otpInput}
+                    onChange={(e) => setOtpInput(e.target.value)}
+                    className="text-xs px-2.5 py-1.5 rounded border border-grey-300 w-36 bg-white focus:outline-none focus:ring-2 focus:ring-green-600"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleVerifyOtp}
+                    isLoading={isVerifyingOtp}
+                  >
+                    Verify Phone
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Phase 2: Trust Level Badge for Individuals */}
+      {isIndividual && profile?.phone_verified && (
+        <div className="mb-4 p-2.5 bg-purple-50 border border-purple-200 rounded text-xs text-purple-900 flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-purple-600 flex-shrink-0" />
+          <span>
+            <strong>Individual Donor Trust Status:</strong> Phone verified. First-time listings undergo admin moderation review; after 3 completed donations, listings become auto-approved.
+          </span>
+        </div>
+      )}
 
       {/* AI Food Vision & Auto-Drafting Hub */}
       <Card className="mb-4 bg-gradient-to-r from-green-50/40 via-white to-green-50/20 border-green-300">
@@ -198,88 +373,36 @@ export default function NewListingPage() {
               <Sparkles className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-grey-900">AI Food Scanner & Smart Draft</h2>
-              <p className="text-xs text-grey-500">Auto-detect portions, allergens, and safe pickup windows from photo or sample</p>
+              <h2 className="text-sm font-semibold text-grey-900">AI Multimodal Food Scanner & Quick Presets</h2>
+              <p className="text-xs text-grey-500">Scan food surplus to auto-fill description, portions, allergens, and safe times.</p>
             </div>
           </div>
-          <label className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded text-xs font-medium bg-white text-grey-700 border border-grey-300 hover:bg-grey-50 cursor-pointer min-h-[44px]">
-            <Camera className="h-4 w-4 text-green-700" />
-            <span>Upload Food Photo</span>
-            <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" disabled={isAiScanning} />
+          <label className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded border border-green-700 bg-green-600 text-white text-xs font-medium cursor-pointer hover:bg-green-700 transition-colors">
+            <Camera className="h-3.5 w-3.5" />
+            <span>Scan Photo</span>
+            <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
           </label>
         </div>
 
-        <div>
-          <span className="text-xs font-medium text-grey-600 block mb-2">Or test with 1-click kitchen presets:</span>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="flex flex-wrap gap-1.5">
+          <span className="text-xs text-grey-500 self-center mr-1">Try quick demo presets:</span>
+          {[
+            { key: "curry_rice", label: "Curry & Rice Platter" },
+            { key: "sandwich_tray", label: "Mixed Sandwich Tray" },
+            { key: "bakery_loaves", label: "Bakery Sourdough & Pastry" },
+            { key: "salad_produce", label: "Fresh Garden Salads" },
+          ].map((preset) => (
             <button
+              key={preset.key}
               type="button"
+              onClick={() => handleAiScan(preset.key)}
               disabled={isAiScanning}
-              onClick={() => handleAiScan("buffet")}
-              className="px-3 py-2 rounded border border-grey-200 bg-white hover:border-green-400 hover:bg-green-50/50 text-left text-xs transition-colors min-h-[44px] flex flex-col justify-center"
+              className="px-2.5 py-1 text-xs rounded bg-white border border-grey-300 text-grey-700 hover:border-green-600 hover:text-green-700 transition-colors disabled:opacity-50"
             >
-              <span className="font-semibold text-grey-800">Warm Buffet Trays</span>
-              <span className="text-[11px] text-grey-500">Roasted veggies & farro</span>
+              {preset.label}
             </button>
-            <button
-              type="button"
-              disabled={isAiScanning}
-              onClick={() => handleAiScan("pastry")}
-              className="px-3 py-2 rounded border border-grey-200 bg-white hover:border-green-400 hover:bg-green-50/50 text-left text-xs transition-colors min-h-[44px] flex flex-col justify-center"
-            >
-              <span className="font-semibold text-grey-800">Artisan Bakery</span>
-              <span className="text-[11px] text-grey-500">Sourdough & pastries</span>
-            </button>
-            <button
-              type="button"
-              disabled={isAiScanning}
-              onClick={() => handleAiScan("lunchboxes")}
-              className="px-3 py-2 rounded border border-grey-200 bg-white hover:border-green-400 hover:bg-green-50/50 text-left text-xs transition-colors min-h-[44px] flex flex-col justify-center"
-            >
-              <span className="font-semibold text-grey-800">Catering Boxed Meals</span>
-              <span className="text-[11px] text-grey-500">Deli sandwich lunchboxes</span>
-            </button>
-          </div>
+          ))}
         </div>
-
-        {isAiScanning && (
-          <div className="mt-3 p-3 bg-green-50 rounded border border-green-200 text-xs text-green-800 flex items-center gap-2">
-            <Sparkles className="h-4 w-4 animate-spin text-green-700" />
-            <span>Scanning visual features, portion quantities, and allergen profiles...</span>
-          </div>
-        )}
-
-        {aiDetectedInfo && (
-          <div className="mt-3 pt-3 border-t border-grey-200 text-xs flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-grey-700">AI Detected Allergens:</span>
-              {aiDetectedInfo.allergens?.length > 0 ? (
-                aiDetectedInfo.allergens.map((a, i) => (
-                  <span key={i} className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-medium text-[11px]">
-                    {a}
-                  </span>
-                ))
-              ) : (
-                <span className="text-grey-400 italic">None detected</span>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-grey-700">Dietary Classification:</span>
-              {aiDetectedInfo.dietary_tags?.map((d, i) => (
-                <span key={i} className="px-2 py-0.5 rounded bg-green-50 text-green-800 border border-green-200 font-medium text-[11px]">
-                  {d}
-                </span>
-              ))}
-            </div>
-
-            {aiDetectedInfo.storage_advice && (
-              <div className="p-2 bg-grey-50 rounded border border-grey-200 text-grey-600">
-                <strong>Handling & Transport Instruction:</strong> {aiDetectedInfo.storage_advice}
-              </div>
-            )}
-          </div>
-        )}
       </Card>
 
       <Card>
@@ -296,21 +419,22 @@ export default function NewListingPage() {
                 value={form.title}
                 onChange={handleChange("title")}
                 error={errors.title}
-                placeholder="e.g. Grilled Chicken & Rice — 40 portions"
+                placeholder="e.g. Function Leftovers — Chicken Biryani (25 portions)"
                 hint="Be specific: name the dishes, portions, and packaging type."
                 required
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
-                  label="Total Quantity"
+                  label={`Total Quantity ${isIndividual ? "(Min 10 for individuals)" : ""}`}
                   type="number"
-                  min="1"
+                  min={isIndividual ? "10" : "1"}
                   step="1"
                   value={form.quantity_total}
                   onChange={handleChange("quantity_total")}
                   error={errors.quantity_total}
-                  placeholder="e.g. 40"
+                  placeholder={isIndividual ? "e.g. 15 (min 10)" : "e.g. 40"}
+                  hint={isIndividual ? "Minimum 10 servings required for individual donors." : undefined}
                   required
                 />
                 <Select
@@ -327,12 +451,13 @@ export default function NewListingPage() {
                 value={form.description}
                 onChange={handleChange("description")}
                 error={errors.description}
-                placeholder="List ingredients, dietary labels (Vegetarian, Halal, Gluten-Free), containers, or allergens."
-                hint="Mention if recipient must bring their own pots or containers."
+                placeholder="List ingredients, dietary labels (Vegetarian, Halal, Vegan), or allergens."
+                hint="Mention if recipient must bring their own containers or carriers."
               />
             </div>
           </div>
 
+          {/* Section 2: Preparation & Safe Freshness Times */}
           <div className="border-t border-grey-200 pt-4">
             <div className="flex items-center gap-2 mb-3">
               <Clock className="h-4 w-4 text-green-600" />
@@ -340,12 +465,12 @@ export default function NewListingPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
-                label="Prepared At"
+                label="Prepared At (Must be within 4 hours)"
                 type="datetime-local"
                 value={form.prepared_at}
                 onChange={handleChange("prepared_at")}
                 error={errors.prepared_at}
-                hint="When was this food cooked or packed?"
+                hint="Cooked food must be listed within 4 hours of preparation."
                 required
               />
               <Input
@@ -360,6 +485,7 @@ export default function NewListingPage() {
             </div>
           </div>
 
+          {/* Section 3: Pickup Location */}
           <div className="border-t border-grey-200 pt-4">
             <div className="flex items-center gap-2 mb-3">
               <MapPin className="h-4 w-4 text-green-600" />
@@ -371,8 +497,8 @@ export default function NewListingPage() {
                 value={form.pickup_location}
                 onChange={handleChange("pickup_location")}
                 error={errors.pickup_location}
-                placeholder="e.g. 42 Maple St — back kitchen loading bay, ring bell"
-                hint="Provide clear directions for the driver."
+                placeholder="e.g. 33 Birch Close — front door, ring bell"
+                hint="Provide clear directions for the charity driver."
                 required
               />
 
@@ -398,6 +524,76 @@ export default function NewListingPage() {
             </div>
           </div>
 
+          {/* Section 4: Phase 2 Required Handling Checklist */}
+          <div className="border-t border-grey-200 pt-4">
+            <div className="flex items-center gap-2 mb-2">
+              <ShieldCheck className="h-4 w-4 text-green-600" />
+              <h2 className="text-sm font-semibold text-grey-900 uppercase tracking-wide">
+                Food Safety Handling Checklist (Required)
+              </h2>
+            </div>
+            <p className="text-xs text-grey-500 mb-3">
+              All 4 boxes must be verified and checked to guarantee food safety compliance before publishing.
+            </p>
+
+            {errors.handling_checklist && (
+              <div className="mb-3 p-2.5 bg-red-50 border border-red-200 rounded text-xs text-red-700 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>{errors.handling_checklist}</span>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2.5 bg-grey-50 p-3.5 rounded border border-grey-200 text-xs">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={checklist.covered}
+                  onChange={handleChecklistChange("covered")}
+                  className="mt-0.5 h-4 w-4 rounded border-grey-300 text-green-600 focus:ring-green-500"
+                />
+                <span className="text-grey-800">
+                  <strong>Food is covered:</strong> Stored in food-grade covered containers, sealed foil trays, or wrapped.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={checklist.stored_properly}
+                  onChange={handleChecklistChange("stored_properly")}
+                  className="mt-0.5 h-4 w-4 rounded border-grey-300 text-green-600 focus:ring-green-500"
+                />
+                <span className="text-grey-800">
+                  <strong>Properly temperature-controlled:</strong> Kept safely hot (&gt;60°C) or promptly refrigerated (&lt;5°C); never left at room temperature.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={checklist.not_reheated}
+                  onChange={handleChecklistChange("not_reheated")}
+                  className="mt-0.5 h-4 w-4 rounded border-grey-300 text-green-600 focus:ring-green-500"
+                />
+                <span className="text-grey-800">
+                  <strong>Not repeatedly reheated:</strong> Food was cooked once and has not undergone repeated heating and cooling cycles.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={checklist.packaged_cleanly}
+                  onChange={handleChecklistChange("packaged_cleanly")}
+                  className="mt-0.5 h-4 w-4 rounded border-grey-300 text-green-600 focus:ring-green-500"
+                />
+                <span className="text-grey-800">
+                  <strong>Packaged cleanly:</strong> Handled in a hygienic kitchen with clean utensils and sanitized hands/gloves.
+                </span>
+              </label>
+            </div>
+          </div>
+
           <div className="border-t border-grey-200 pt-4 flex items-center justify-end gap-3">
             <Button
               variant="secondary"
@@ -406,7 +602,11 @@ export default function NewListingPage() {
             >
               Cancel
             </Button>
-            <Button type="submit" isLoading={isSubmitting}>
+            <Button
+              type="submit"
+              isLoading={isSubmitting}
+              disabled={isIndividual && !profile?.phone_verified}
+            >
               Publish Listing
             </Button>
           </div>

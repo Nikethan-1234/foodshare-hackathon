@@ -84,6 +84,7 @@ def register():
         address=data.get("address", "").strip(),
         description=data.get("description", "").strip(),
         donor_type=donor_type,
+        phone_verified=False if donor_type == "INDIVIDUAL" else True,
     )
     db.session.add(profile)
     db.session.commit()

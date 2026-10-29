@@ -27,7 +27,7 @@ def get_admin_dashboard():
     open_reports_count = Report.query.filter_by(status="OPEN").count()
 
     # Listings breakdown by status
-    statuses = ["AVAILABLE", "RESERVED", "COMPLETED", "EXPIRED", "REMOVED"]
+    statuses = ["PENDING_APPROVAL", "AVAILABLE", "RESERVED", "COMPLETED", "EXPIRED", "REMOVED"]
     listings_by_status = {
         s: Listing.query.filter_by(status=s).count() for s in statuses
     }
@@ -132,6 +132,67 @@ def remove_listing(listing_id):
     return jsonify({
         "listing": listing.to_dict(),
         "message": f"Listing #{listing.id} has been removed by admin moderation."
+    }), 200
+
+
+@admin_bp.route("/listings/<int:listing_id>/approve", methods=["POST"])
+@role_required("admin")
+def approve_listing(listing_id):
+    """
+    Moderator action: Approve a PENDING_APPROVAL listing from a new individual donor.
+    """
+    admin_id = int(get_jwt_identity())
+    listing = Listing.query.get_or_404(listing_id)
+
+    if listing.status != "PENDING_APPROVAL":
+        return jsonify({"error": f"Cannot approve listing with status '{listing.status}'. Only PENDING_APPROVAL listings can be approved."}), 400
+
+    listing.status = "AVAILABLE"
+    db.session.add(StatusHistory(
+        entity_type="listing",
+        entity_id=listing.id,
+        from_status="PENDING_APPROVAL",
+        to_status="AVAILABLE",
+        actor_id=admin_id,
+        note="Approved by platform moderator. Listing is now public.",
+    ))
+    db.session.commit()
+
+    return jsonify({
+        "listing": listing.to_dict(),
+        "message": f"Listing #{listing.id} approved successfully and is now available to recipients."
+    }), 200
+
+
+@admin_bp.route("/listings/<int:listing_id>/reject", methods=["POST"])
+@role_required("admin")
+def reject_listing(listing_id):
+    """
+    Moderator action: Reject a PENDING_APPROVAL listing from an individual donor.
+    """
+    admin_id = int(get_jwt_identity())
+    listing = Listing.query.get_or_404(listing_id)
+
+    if listing.status != "PENDING_APPROVAL":
+        return jsonify({"error": f"Cannot reject listing with status '{listing.status}'. Only PENDING_APPROVAL listings can be rejected."}), 400
+
+    data = request.get_json() or {}
+    reason = data.get("reason", "").strip() or "Did not meet food safety or quality criteria."
+
+    listing.status = "REMOVED"
+    db.session.add(StatusHistory(
+        entity_type="listing",
+        entity_id=listing.id,
+        from_status="PENDING_APPROVAL",
+        to_status="REMOVED",
+        actor_id=admin_id,
+        note=f"Rejected by platform moderator: {reason}",
+    ))
+    db.session.commit()
+
+    return jsonify({
+        "listing": listing.to_dict(),
+        "message": f"Listing #{listing.id} has been rejected and removed."
     }), 200
 
 

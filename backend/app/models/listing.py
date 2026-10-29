@@ -4,7 +4,7 @@ from datetime import datetime
 class Listing(db.Model):
     __tablename__ = "listings"
 
-    STATUSES = ["AVAILABLE", "RESERVED", "COMPLETED", "EXPIRED", "REMOVED"]
+    STATUSES = ["PENDING_APPROVAL", "AVAILABLE", "RESERVED", "COMPLETED", "EXPIRED", "REMOVED"]
 
     id = db.Column(db.Integer, primary_key=True)
     donor_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
@@ -21,6 +21,11 @@ class Listing(db.Model):
     status = db.Column(db.String(20), default="AVAILABLE", nullable=False, index=True)
     allergens = db.Column(db.String(255), default="")
     dietary_tags = db.Column(db.String(255), default="")
+    # Handling checklist (all required to be True)
+    is_covered = db.Column(db.Boolean, default=True, nullable=False)
+    is_stored_properly = db.Column(db.Boolean, default=True, nullable=False)
+    is_not_reheated = db.Column(db.Boolean, default=True, nullable=False)
+    is_packaged_cleanly = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -47,6 +52,12 @@ class Listing(db.Model):
             "status": self.status,
             "allergens": [a.strip() for a in self.allergens.split(",") if a.strip()] if self.allergens else [],
             "dietary_tags": [t.strip() for t in self.dietary_tags.split(",") if t.strip()] if self.dietary_tags else [],
+            "handling_checklist": {
+                "covered": self.is_covered,
+                "stored_properly": self.is_stored_properly,
+                "not_reheated": self.is_not_reheated,
+                "packaged_cleanly": self.is_packaged_cleanly,
+            },
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }
