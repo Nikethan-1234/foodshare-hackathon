@@ -12,11 +12,17 @@ from app.models import User, Profile, Listing, Request, StatusHistory
 
 DEMO_DISCLAIMER = "DEMO DATA — not for production use"
 
+# donor_index maps into the DONORS list (0-based).
+# 0-2: RESTAURANT donors (existing)
+# 3-4: INSTITUTION donors (new)
+# 5-6: INDIVIDUAL donors (new)
+
 DONORS = [
     {
         "email": "donor@demo.local",
         "password": "demo1234",
         "role": "donor",
+        "donor_type": "RESTAURANT",
         "organization_name": "Green Leaf Restaurant",
         "contact_name": "Marco Rossi",
         "phone": "+1-555-0101",
@@ -27,6 +33,7 @@ DONORS = [
         "email": "donor2@demo.local",
         "password": "demo1234",
         "role": "donor",
+        "donor_type": "RESTAURANT",
         "organization_name": "City Catering Co.",
         "contact_name": "Priya Nair",
         "phone": "+1-555-0102",
@@ -37,11 +44,58 @@ DONORS = [
         "email": "donor3@demo.local",
         "password": "demo1234",
         "role": "donor",
+        "donor_type": "RESTAURANT",
         "organization_name": "Sunrise Bakery",
         "contact_name": "James Okafor",
         "phone": "+1-555-0103",
         "address": "7 Elm Rd, Springfield, IL 62703",
         "description": "Artisan bakery. End-of-day bread and pastry surplus available most days.",
+    },
+    # ---- INSTITUTION donors ----
+    {
+        "email": "inst1@demo.local",
+        "password": "demo1234",
+        "role": "donor",
+        "donor_type": "INSTITUTION",
+        "organization_name": "St. Andrew's Church",
+        "contact_name": "Father Benedict",
+        "phone": "+1-555-0301",
+        "address": "12 Church Lane, Springfield, IL 62710",
+        "description": "Parish church with weekly community lunch programme. Surplus food from Sunday service available most weeks.",
+    },
+    {
+        "email": "inst2@demo.local",
+        "password": "demo1234",
+        "role": "donor",
+        "donor_type": "INSTITUTION",
+        "organization_name": "Springfield College Canteen",
+        "contact_name": "Deepa Sharma",
+        "phone": "+1-555-0302",
+        "address": "200 College Rd, Springfield, IL 62711",
+        "description": "College campus canteen. Surplus cooked meals available after lunch service on weekdays.",
+    },
+    # ---- INDIVIDUAL donors ----
+    {
+        "email": "indiv1@demo.local",
+        "password": "demo1234",
+        "role": "donor",
+        "donor_type": "INDIVIDUAL",
+        "organization_name": "Ravi Patel",   # auto-set from contact_name for individuals
+        "contact_name": "Ravi Patel",
+        "phone": "+1-555-0401",
+        "address": "33 Birch Close, Springfield, IL 62720",
+        "description": "Home cook. Donating surplus food from family function.",
+    },
+    {
+        "email": "indiv2@demo.local",
+        "password": "demo1234",
+        "role": "donor",
+        "donor_type": "INDIVIDUAL",
+        "organization_name": "Meena Krishnamurthy",
+        "contact_name": "Meena Krishnamurthy",
+        "phone": "+1-555-0402",
+        "address": "9 Lotus St, Springfield, IL 62721",
+        "description": "Leftover food from a wedding celebration — freshly cooked, plenty for a shelter.",
     },
 ]
 
@@ -222,6 +276,60 @@ LISTINGS_DATA = [
         "status": "AVAILABLE",
         "donor_index": 2,
     },
+    # ---- INSTITUTION listings (donor_index 3 = St. Andrew's Church, 4 = College Canteen) ----
+    {
+        "title": "Sunday community lunch — 80 portions",
+        "description": "Rice, dhal, and vegetable curry cooked in the church hall kitchen. Vegan, suitable for all. Packaged in covered trays.",
+        "quantity_total": 80,
+        "unit": "portions",
+        "prepared_at": now - timedelta(hours=1),
+        "use_by": now + timedelta(hours=7),
+        "pickup_location": "12 Church Lane, Springfield — parish hall side door",
+        "pickup_start": now + timedelta(minutes=30),
+        "pickup_end": now + timedelta(hours=3),
+        "status": "AVAILABLE",
+        "donor_index": 3,
+    },
+    {
+        "title": "College canteen surplus — 50 lunch trays",
+        "description": "Leftover cafeteria lunch trays: mixed veg curry, chapati, and salad. Halal. Individually covered.",
+        "quantity_total": 50,
+        "unit": "trays",
+        "prepared_at": now - timedelta(hours=2),
+        "use_by": now + timedelta(hours=5),
+        "pickup_location": "200 College Rd, Springfield — canteen loading bay",
+        "pickup_start": now + timedelta(hours=1),
+        "pickup_end": now + timedelta(hours=3),
+        "status": "AVAILABLE",
+        "donor_index": 4,
+    },
+    # ---- INDIVIDUAL listings (donor_index 5 = Ravi Patel, 6 = Meena Krishnamurthy) ----
+    {
+        "title": "Home function leftovers — 25 portions biryani",
+        "description": "Chicken and vegetable biryani cooked this morning for a family function. Freshly made, stored covered. Not reheated.",
+        "quantity_total": 25,
+        "unit": "portions",
+        "prepared_at": now - timedelta(hours=3),
+        "use_by": now + timedelta(hours=5),
+        "pickup_location": "33 Birch Close, Springfield — front door",
+        "pickup_start": now + timedelta(minutes=30),
+        "pickup_end": now + timedelta(hours=2),
+        "status": "AVAILABLE",
+        "donor_index": 5,
+    },
+    {
+        "title": "Wedding function sweets and snacks — 30 packs",
+        "description": "Assorted Indian sweets (ladoo, barfi) and savoury snacks (samosa, chakli) from yesterday's wedding. All freshly prepared, individually packed.",
+        "quantity_total": 30,
+        "unit": "packs",
+        "prepared_at": now - timedelta(hours=4),
+        "use_by": now + timedelta(hours=8),
+        "pickup_location": "9 Lotus St, Springfield — call on arrival",
+        "pickup_start": now + timedelta(hours=1),
+        "pickup_end": now + timedelta(hours=4),
+        "status": "AVAILABLE",
+        "donor_index": 6,
+    },
 ]
 
 
@@ -247,6 +355,7 @@ def seed():
                 phone=d["phone"],
                 address=d["address"],
                 description=d["description"],
+                donor_type=d.get("donor_type", "RESTAURANT"),
             )
             db.session.add(p)
             donor_users.append(u)
@@ -371,10 +480,14 @@ def seed():
         print("\nDISCLAIMER: This is demo data for development only.")
         print("This platform is NOT a food-safety certification system.\n")
         print("Demo credentials (password: demo1234 for all):")
-        print(f"  Admin:     admin@demo.local")
-        print(f"  Donor 1:   donor@demo.local     (Green Leaf Restaurant)")
-        print(f"  Donor 2:   donor2@demo.local    (City Catering Co.)")
-        print(f"  Donor 3:   donor3@demo.local    (Sunrise Bakery)")
+        print(f"  Admin:       admin@demo.local")
+        print(f"  [RESTAURANT] donor@demo.local     — Green Leaf Restaurant")
+        print(f"  [RESTAURANT] donor2@demo.local    — City Catering Co.")
+        print(f"  [RESTAURANT] donor3@demo.local    — Sunrise Bakery")
+        print(f"  [INSTITUTION] inst1@demo.local    — St. Andrew's Church")
+        print(f"  [INSTITUTION] inst2@demo.local    — Springfield College Canteen")
+        print(f"  [INDIVIDUAL]  indiv1@demo.local   — Ravi Patel")
+        print(f"  [INDIVIDUAL]  indiv2@demo.local   — Meena Krishnamurthy")
         print(f"  Recipient 1: recipient@demo.local  (Hope Community Kitchen)")
         print(f"  Recipient 2: recipient2@demo.local (Springfield Food Bank)")
         print(f"  Recipient 3: recipient3@demo.local (Shelter First Network)")

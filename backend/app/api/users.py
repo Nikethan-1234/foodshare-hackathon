@@ -2,10 +2,10 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity
 from app import db
 from app.models import User, Profile
+from app.models.profile import DONOR_TYPES
 from app.auth.decorators import active_user_required, role_required
 
 users_bp = Blueprint("users", __name__)
-
 
 @users_bp.route("/profile", methods=["GET"])
 @active_user_required
@@ -32,6 +32,9 @@ def update_profile():
         errors["organization_name"] = "Organization name cannot be empty."
     if "contact_name" in data and not data["contact_name"].strip():
         errors["contact_name"] = "Contact name cannot be empty."
+    if "donor_type" in data and data["donor_type"] is not None:
+        if data["donor_type"] not in DONOR_TYPES:
+            errors["donor_type"] = f"donor_type must be one of: {', '.join(DONOR_TYPES)}."
     if errors:
         return jsonify({"error": "Validation failed", "fields": errors}), 422
 
@@ -44,6 +47,10 @@ def update_profile():
     for field in allowed_fields:
         if field in data:
             setattr(profile, field, data[field].strip() if isinstance(data[field], str) else data[field])
+
+    # Only donors can update donor_type
+    if "donor_type" in data and user.role == "donor":
+        profile.donor_type = data["donor_type"]
 
     db.session.commit()
     return jsonify({"profile": profile.to_dict()}), 200

@@ -78,3 +78,31 @@ export function RoleBadge({ role, className = "" }) {
     </span>
   );
 }
+
+const DONOR_TYPE_STYLES = {
+  RESTAURANT: "bg-orange-50 text-orange-800 border-orange-200",
+  INSTITUTION: "bg-sky-50 text-sky-800 border-sky-200",
+  INDIVIDUAL: "bg-purple-50 text-purple-700 border-purple-200",
+};
+
+const DONOR_TYPE_LABELS = {
+  RESTAURANT: "Restaurant / Caterer",
+  INSTITUTION: "Institution",
+  INDIVIDUAL: "Individual",
+};
+
+export function DonorTypeBadge({ donorType, className = "" }) {
+  if (!donorType) return null;
+  const style = DONOR_TYPE_STYLES[donorType] || "bg-grey-100 text-grey-500 border-grey-200";
+  return (
+    <span
+      className={clsx(
+        "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border",
+        style,
+        className
+      )}
+    >
+      {DONOR_TYPE_LABELS[donorType] || donorType}
+    </span>
+  );
+}

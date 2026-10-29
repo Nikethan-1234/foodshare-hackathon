@@ -28,10 +28,12 @@ class Listing(db.Model):
     requests = db.relationship("Request", back_populates="listing", lazy="dynamic")
 
     def to_dict(self):
+        donor_profile = self.donor.profile if self.donor else None
         return {
             "id": self.id,
             "donor_id": self.donor_id,
-            "donor_name": self.donor.profile.organization_name if self.donor.profile else None,
+            "donor_name": donor_profile.organization_name if donor_profile else None,
+            "donor_type": donor_profile.donor_type if donor_profile else None,
             "title": self.title,
             "description": self.description,
             "quantity_total": self.quantity_total,

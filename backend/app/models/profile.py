@@ -1,6 +1,10 @@
 from app import db
 from datetime import datetime
 
+# Valid donor sub-types. Stored on Profile so recipients and admins also have None.
+DONOR_TYPES = ["RESTAURANT", "INSTITUTION", "INDIVIDUAL"]
+
+
 class Profile(db.Model):
     __tablename__ = "profiles"
 
@@ -11,6 +15,8 @@ class Profile(db.Model):
     phone = db.Column(db.String(30))
     address = db.Column(db.Text)
     description = db.Column(db.Text)
+    # donor_type: RESTAURANT | INSTITUTION | INDIVIDUAL (null for recipients/admins)
+    donor_type = db.Column(db.String(20), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -25,5 +31,6 @@ class Profile(db.Model):
             "phone": self.phone,
             "address": self.address,
             "description": self.description,
+            "donor_type": self.donor_type,
             "created_at": self.created_at.isoformat(),
         }

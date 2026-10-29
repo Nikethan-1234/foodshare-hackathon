@@ -4,10 +4,18 @@ import { useToast } from "../../context/ToastContext";
 import api from "../../utils/api";
 import { Card, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Input, Textarea } from "../../components/ui/Input";
+import { Select } from "../../components/ui/Select";
 import { Button } from "../../components/ui/Button";
+import { DonorTypeBadge } from "../../components/ui/Badge";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { Building2, Save } from "lucide-react";
+
+const DONOR_TYPE_OPTIONS = [
+  { value: "RESTAURANT", label: "Restaurant / Caterer / Shop" },
+  { value: "INSTITUTION", label: "Institution (church, temple, hostel, canteen, function hall)" },
+  { value: "INDIVIDUAL", label: "Individual (household / function host)" },
+];
 
 export default function DonorProfilePage() {
   const { profile, updateProfile, user } = useAuth();
@@ -19,6 +27,7 @@ export default function DonorProfilePage() {
     phone: "",
     address: "",
     description: "",
+    donor_type: "",
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(true);
@@ -37,6 +46,7 @@ export default function DonorProfilePage() {
         phone: p.phone || "",
         address: p.address || "",
         description: p.description || "",
+        donor_type: p.donor_type || "",
       });
       if (res.data.profile) {
         updateProfile(res.data.profile);
@@ -92,20 +102,25 @@ export default function DonorProfilePage() {
   if (isLoading) return <LoadingState message="Loading profile..." />;
   if (loadError) return <ErrorState message={loadError} onRetry={fetchProfile} />;
 
+  const isIndividual = form.donor_type === "INDIVIDUAL";
+
   return (
     <div className="p-4 md:p-6 max-w-3xl">
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-grey-900">Donor Profile</h1>
-        <p className="text-sm text-grey-500">
-          Manage your organization details and default contact info for food pickups.
-        </p>
+        <div className="flex items-center gap-2 mt-1">
+          <p className="text-sm text-grey-500">
+            Manage your contact info for food pickups.
+          </p>
+          {form.donor_type && <DonorTypeBadge donorType={form.donor_type} />}
+        </div>
       </div>
 
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-green-600" />
-            <CardTitle>Organization Details</CardTitle>
+            <CardTitle>{isIndividual ? "Personal Details" : "Organization Details"}</CardTitle>
           </div>
           <span className="text-xs bg-grey-100 text-grey-600 px-2 py-1 rounded font-mono">
             {user?.email}
@@ -113,21 +128,33 @@ export default function DonorProfilePage() {
         </CardHeader>
 
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+          {/* Donor type selector */}
+          <Select
+            label="Donor type"
+            value={form.donor_type}
+            onChange={handleChange("donor_type")}
+            error={errors.donor_type}
+            options={DONOR_TYPE_OPTIONS}
+            placeholder="Select donor type"
+          />
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {!isIndividual && (
+              <Input
+                label="Organization Name"
+                value={form.organization_name}
+                onChange={handleChange("organization_name")}
+                error={errors.organization_name}
+                placeholder="e.g. Green Leaf Restaurant"
+                required
+              />
+            )}
             <Input
-              label="Organization Name"
-              value={form.organization_name}
-              onChange={handleChange("organization_name")}
-              error={errors.organization_name}
-              placeholder="e.g. Green Leaf Restaurant"
-              required
-            />
-            <Input
-              label="Contact Person"
+              label={isIndividual ? "Your Name" : "Contact Person"}
               value={form.contact_name}
               onChange={handleChange("contact_name")}
               error={errors.contact_name}
-              placeholder="e.g. Marco Rossi"
+              placeholder={isIndividual ? "e.g. Ravi Patel" : "e.g. Marco Rossi"}
               required
             />
           </div>
@@ -140,7 +167,7 @@ export default function DonorProfilePage() {
               onChange={handleChange("phone")}
               error={errors.phone}
               placeholder="e.g. +1-555-0101"
-              hint="Recipients will call this during scheduled pickup."
+              hint={isIndividual ? "Shown to recipients only after request accepted." : "Recipients will call this during scheduled pickup."}
             />
             <Input
               label="Address / Default Pickup Location"
@@ -152,14 +179,16 @@ export default function DonorProfilePage() {
             />
           </div>
 
-          <Textarea
-            label="About the Business"
-            value={form.description}
-            onChange={handleChange("description")}
-            error={errors.description}
-            placeholder="e.g. Family-owned Italian restaurant. We regularly have surplus prepared meals at close of service."
-            hint="Helps recipient organizations understand your kitchen and food handling."
-          />
+          {!isIndividual && (
+            <Textarea
+              label="About the Organization"
+              value={form.description}
+              onChange={handleChange("description")}
+              error={errors.description}
+              placeholder="e.g. Family-owned Italian restaurant. We regularly have surplus prepared meals at close of service."
+              hint="Helps recipient organizations understand your kitchen and food handling."
+            />
+          )}
 
           <div className="flex justify-end pt-2">
             <Button type="submit" isLoading={isSaving}>

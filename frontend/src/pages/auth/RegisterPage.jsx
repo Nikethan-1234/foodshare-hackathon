@@ -7,13 +7,20 @@ import { Button } from "../../components/ui/Button";
 import { Input, Textarea } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
 
+const DONOR_TYPE_OPTIONS = [
+  { value: "RESTAURANT", label: "Restaurant / Caterer / Shop" },
+  { value: "INSTITUTION", label: "Institution — church, temple, hostel, canteen, function hall" },
+  { value: "INDIVIDUAL", label: "Individual — household or function host" },
+];
+
 export default function RegisterPage() {
   const { register } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    email: "", password: "", role: "", organization_name: "", contact_name: "",
+    email: "", password: "", role: "", donor_type: "",
+    organization_name: "", contact_name: "",
     phone: "", address: "", description: "",
   });
   const [errors, setErrors] = useState({});
@@ -22,7 +29,21 @@ export default function RegisterPage() {
 
   const ROLE_HOME = { donor: "/donor/dashboard", recipient: "/recipient/dashboard" };
 
-  const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
+  const set = (field) => (e) => {
+    const value = e.target.value;
+    setForm((f) => {
+      const next = { ...f, [field]: value };
+      // Reset donor_type when switching away from donor
+      if (field === "role" && value !== "donor") {
+        next.donor_type = "";
+      }
+      return next;
+    });
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: null }));
+  };
+
+  const isIndividual = form.role === "donor" && form.donor_type === "INDIVIDUAL";
+  const isDonor = form.role === "donor";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,7 +51,12 @@ export default function RegisterPage() {
     setServerError("");
     setIsLoading(true);
     try {
-      const data = await register(form);
+      // For INDIVIDUAL donors, if they left org name blank, fill from contact_name
+      const payload = { ...form };
+      if (isIndividual && !payload.organization_name.trim()) {
+        payload.organization_name = payload.contact_name.trim();
+      }
+      const data = await register(payload);
       toast({ message: "Account created. Welcome!", type: "success" });
       navigate(ROLE_HOME[data.user.role] || "/", { replace: true });
     } catch (err) {
@@ -65,6 +91,7 @@ export default function RegisterPage() {
           )}
 
           <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+            {/* Step 1: Account type */}
             <Select
               label="Account type"
               value={form.role}
@@ -72,18 +99,74 @@ export default function RegisterPage() {
               error={errors.role}
               placeholder="Select a role"
               options={[
-                { value: "donor", label: "Donor — restaurants, caterers, shops" },
-                { value: "recipient", label: "Recipient — charities, community kitchens" },
+                { value: "donor", label: "Donor — share your surplus food" },
+                { value: "recipient", label: "Recipient — charity, community kitchen" },
               ]}
               required
             />
+
+            {/* Step 2: Donor sub-type (only for donors) */}
+            {isDonor && (
+              <div>
+                <Select
+                  label="Donor type"
+                  value={form.donor_type}
+                  onChange={set("donor_type")}
+                  error={errors.donor_type}
+                  placeholder="Select your donor type"
+                  options={DONOR_TYPE_OPTIONS}
+                  required
+                />
+                {form.donor_type === "INDIVIDUAL" && (
+                  <p className="mt-1.5 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5">
+                    Individual donors: your phone will be shown to recipients only after a request is accepted.
+                    Food safety disclaimer applies — you remain responsible for safe handling.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Common fields */}
             <Input label="Email" type="email" value={form.email} onChange={set("email")} error={errors.email} autoComplete="email" required />
             <Input label="Password" type="password" value={form.password} onChange={set("password")} error={errors.password} autoComplete="new-password" hint="At least 8 characters" required />
-            <Input label="Organization name" value={form.organization_name} onChange={set("organization_name")} error={errors.organization_name} required />
-            <Input label="Contact name" value={form.contact_name} onChange={set("contact_name")} error={errors.contact_name} required />
-            <Input label="Phone" type="tel" value={form.phone} onChange={set("phone")} error={errors.phone} />
-            <Input label="Address" value={form.address} onChange={set("address")} error={errors.address} />
-            <Textarea label="About your organization" value={form.description} onChange={set("description")} error={errors.description} />
+
+            {/* Name fields — adapt based on donor type */}
+            {isIndividual ? (
+              <>
+                <Input
+                  label="Your name"
+                  value={form.contact_name}
+                  onChange={set("contact_name")}
+                  error={errors.contact_name}
+                  placeholder="e.g. Ravi Patel"
+                  required
+                />
+                <Input
+                  label="Phone number"
+                  type="tel"
+                  value={form.phone}
+                  onChange={set("phone")}
+                  error={errors.phone}
+                  hint="Shown to recipients only after request accepted."
+                />
+                <Input
+                  label="Pickup address"
+                  value={form.address}
+                  onChange={set("address")}
+                  error={errors.address}
+                  placeholder="e.g. 33 Birch Close, Springfield"
+                />
+              </>
+            ) : (
+              <>
+                <Input label="Organization name" value={form.organization_name} onChange={set("organization_name")} error={errors.organization_name} required />
+                <Input label="Contact person" value={form.contact_name} onChange={set("contact_name")} error={errors.contact_name} required />
+                <Input label="Phone" type="tel" value={form.phone} onChange={set("phone")} error={errors.phone} />
+                <Input label="Address" value={form.address} onChange={set("address")} error={errors.address} />
+                <Textarea label="About your organization" value={form.description} onChange={set("description")} error={errors.description} />
+              </>
+            )}
+
             <Button type="submit" isLoading={isLoading} fullWidth className="mt-2">
               Create account
             </Button>

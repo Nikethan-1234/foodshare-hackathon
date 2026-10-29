@@ -6,7 +6,7 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input, Textarea } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
-import { StatusBadge } from "../../components/ui/Badge";
+import { StatusBadge, DonorTypeBadge } from "../../components/ui/Badge";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { ErrorState } from "../../components/ui/ErrorState";
@@ -249,9 +249,14 @@ export default function BrowsePage() {
                 <div>
                   {/* Top Donor & Countdown */}
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-1.5 text-xs text-grey-600 font-medium truncate">
-                      <Building2 className="h-3.5 w-3.5 text-grey-400 flex-shrink-0" />
-                      <span className="truncate">{item.donor_name || "Food Donor"}</span>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5 text-xs text-grey-600 font-medium truncate">
+                        <Building2 className="h-3.5 w-3.5 text-grey-400 flex-shrink-0" />
+                        <span className="truncate">{item.donor_name || "Food Donor"}</span>
+                      </div>
+                      {item.donor_type && (
+                        <DonorTypeBadge donorType={item.donor_type} />
+                      )}
                     </div>
                     <PickupCountdown pickupEnd={item.pickup_end} />
                   </div>
@@ -457,7 +462,12 @@ export default function BrowsePage() {
             <div className="flex items-start justify-between border-b border-grey-200 pb-3">
               <div>
                 <h3 className="font-semibold text-base text-grey-900">{detailItem.title}</h3>
-                <p className="text-xs text-grey-500 mt-0.5">Offered by {detailItem.donor_name}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-xs text-grey-500">Offered by {detailItem.donor_name}</p>
+                  {detailItem.donor_type && (
+                    <DonorTypeBadge donorType={detailItem.donor_type} />
+                  )}
+                </div>
               </div>
               <span className="text-xs font-semibold px-2.5 py-1 rounded bg-green-50 border border-green-200 text-green-800">
                 {detailItem.quantity_left} of {detailItem.quantity_total} {detailItem.unit} left

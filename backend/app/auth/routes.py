@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from app import db
 from app.models import User, Profile
+from app.models.profile import DONOR_TYPES
 from app.auth.decorators import active_user_required
 
 auth_bp = Blueprint("auth", __name__)
@@ -19,10 +20,32 @@ def validate_registration(data):
         errors["password"] = "Password must be at least 8 characters."
     if not data.get("role") or data["role"] not in ["donor", "recipient"]:
         errors["role"] = "Role must be 'donor' or 'recipient'."
-    if not data.get("organization_name"):
-        errors["organization_name"] = "Organization name is required."
-    if not data.get("contact_name"):
-        errors["contact_name"] = "Contact name is required."
+
+    role = data.get("role")
+    donor_type = data.get("donor_type")
+
+    if role == "donor":
+        # donor_type is required for donors
+        if not donor_type or donor_type not in DONOR_TYPES:
+            errors["donor_type"] = "Donor type must be RESTAURANT, INSTITUTION, or INDIVIDUAL."
+
+        if donor_type == "INDIVIDUAL":
+            # Individuals use their personal name; organization_name is auto-set
+            if not data.get("contact_name"):
+                errors["contact_name"] = "Your name is required."
+        else:
+            # RESTAURANT or INSTITUTION
+            if not data.get("organization_name"):
+                errors["organization_name"] = "Organization name is required."
+            if not data.get("contact_name"):
+                errors["contact_name"] = "Contact name is required."
+    else:
+        # recipient
+        if not data.get("organization_name"):
+            errors["organization_name"] = "Organization name is required."
+        if not data.get("contact_name"):
+            errors["contact_name"] = "Contact name is required."
+
     return errors
 
 
@@ -44,13 +67,23 @@ def register():
     db.session.add(user)
     db.session.flush()
 
+    role = data["role"]
+    donor_type = data.get("donor_type") if role == "donor" else None
+
+    # For individuals, use contact_name as organization_name if org name blank
+    if donor_type == "INDIVIDUAL":
+        org_name = data.get("organization_name", "").strip() or data["contact_name"].strip()
+    else:
+        org_name = data.get("organization_name", "").strip()
+
     profile = Profile(
         user_id=user.id,
-        organization_name=data["organization_name"].strip(),
-        contact_name=data["contact_name"].strip(),
+        organization_name=org_name,
+        contact_name=data.get("contact_name", "").strip(),
         phone=data.get("phone", "").strip(),
         address=data.get("address", "").strip(),
         description=data.get("description", "").strip(),
+        donor_type=donor_type,
     )
     db.session.add(profile)
     db.session.commit()
