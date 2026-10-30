@@ -14,7 +14,7 @@ import { PickupCountdown } from "../../components/ui/PickupCountdown";
 import { formatDateTime, formatTimeLeft } from "../../utils/format";
 import {
   Search, Package, Clock, MapPin, Building2, CheckCircle2,
-  Calendar, Eye, Send, ShieldAlert, Sparkles, Flag
+  Calendar, Eye, Send, ShieldAlert, Sparkles, Flag, Repeat
 } from "lucide-react";
 
 const UNIT_FILTERS = [
@@ -31,6 +31,7 @@ export default function BrowsePage() {
   const { toast } = useToast();
 
   const [listings, setListings] = useState([]);
+  const [upcomingRecurring, setUpcomingRecurring] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUnit, setSelectedUnit] = useState("ALL");
   const [isLoading, setIsLoading] = useState(true);
@@ -60,8 +61,12 @@ export default function BrowsePage() {
       const url = selectedUnit === "ALL"
         ? "/listings/available"
         : `/listings/available?unit=${selectedUnit}`;
-      const res = await api.get(url);
-      setListings(res.data.listings || []);
+      const [resListings, resUpcoming] = await Promise.all([
+        api.get(url),
+        api.get("/recurring/upcoming").catch(() => ({ data: { upcoming: [] } }))
+      ]);
+      setListings(resListings.data.listings || []);
+      setUpcomingRecurring(resUpcoming.data.upcoming || []);
     } catch (err) {
       setLoadError("Failed to load available food listings.");
     } finally {
@@ -220,6 +225,55 @@ export default function BrowsePage() {
           ))}
         </div>
       </div>
+
+      {/* Upcoming Recurring Institutional Donations Section */}
+      {upcomingRecurring.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-grey-900 uppercase tracking-wide flex items-center gap-1.5">
+              <Repeat className="h-4 w-4 text-sky-600" />
+              Upcoming Scheduled Donations (Institutions)
+            </h2>
+            <span className="text-xs text-grey-500">Live listings auto-generate on schedule</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {upcomingRecurring.map((item) => (
+              <div
+                key={item.id}
+                className="p-3.5 bg-sky-50/50 border border-sky-200 rounded-lg flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-sky-100 text-sky-800">
+                      {item.day_name} at {item.usual_time}
+                    </span>
+                    <span className="text-xs text-grey-500">{item.pickup_window_hours}h window</span>
+                  </div>
+                  <h4 className="font-semibold text-sm text-grey-900 mb-0.5">{item.title}</h4>
+                  <p className="text-xs text-grey-500 flex items-center gap-1 mb-2">
+                    <Building2 className="h-3 w-3 text-grey-400" />
+                    <span>{item.donor_name}</span>
+                  </p>
+                  {item.description && (
+                    <p className="text-xs text-grey-600 line-clamp-2 mb-2 italic">
+                      "{item.description}"
+                    </p>
+                  )}
+                </div>
+                <div className="pt-2 border-t border-sky-200/60 flex items-center justify-between text-xs text-grey-600">
+                  <span className="font-medium text-sky-900">
+                    Est. {item.expected_servings} {item.unit}
+                  </span>
+                  <span className="text-grey-400 truncate max-w-[140px]" title={item.pickup_location}>
+                    📍 {item.pickup_location}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Listing Cards Grid */}
       {isLoading ? (

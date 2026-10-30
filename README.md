@@ -180,7 +180,18 @@ For urgent surpluses resulting from functions, weddings, community meals, or sud
 
 ---
 
-## 7. Setup & Running Locally
+## 7. Recurring Listings for Institutions (Phase 4)
+
+Predictable surplus from weekly operations (e.g. churches, canteens, hostels):
+- **Institutional Commitment:** Institutions (`INSTITUTION` & `RESTAURANT`) can configure recurring schedules (*Day of week*, *Usual time*, *Expected servings*, *Pickup address*, *Window duration*).
+- **Recipients "Upcoming" Section:** Non-profit charities can view planned upcoming recurring surplus directly on the Browse Food page to plan collection runs.
+- **Auto-Generation & On-Demand Dispatch:** Live `AVAILABLE` listings are generated either automatically on schedule (`/api/jobs/generate-recurring`) or on-demand by the donor with full audit logging.
+- **Series Control:** Donors can edit expected servings before an occurrence goes live, pause the schedule (e.g. during vacations), or cancel it.
+- **Role Isolation:** Individual donors are prevented from creating recurring series (`HTTP 403`).
+
+---
+
+## 8. Setup & Running Locally
 
 ### Prerequisites
 - **Python 3.10+**

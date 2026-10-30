@@ -14,7 +14,7 @@ import { EventLeftoverQuickPostModal } from "../../components/donor/EventLeftove
 import {
   Package, Clock, CheckCircle2, AlertCircle, Plus,
   ArrowRight, ShieldCheck, UserCheck, Inbox,
-  Sparkles, Leaf, Droplets, Award, Printer, Car, Zap
+  Sparkles, Leaf, Droplets, Award, Printer, Car, Zap, Repeat
 } from "lucide-react";
 
 export default function DonorDashboardPage() {
@@ -68,6 +68,16 @@ export default function DonorDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {["INSTITUTION", "RESTAURANT"].includes(profile?.donor_type) && (
+            <Button
+              variant="secondary"
+              onClick={() => navigate("/donor/recurring")}
+              className="border-sky-300 text-sky-800 hover:bg-sky-50"
+            >
+              <Repeat className="h-4 w-4 text-sky-600" />
+              Recurring Series
+            </Button>
+          )}
           <Button
             variant="secondary"
             onClick={() => setIsQuickPostOpen(true)}

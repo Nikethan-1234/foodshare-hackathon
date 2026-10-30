@@ -13,6 +13,7 @@ const RegisterPage = lazy(() => import("./pages/auth/RegisterPage"));
 const DonorDashboard = lazy(() => import("./pages/donor/DashboardPage"));
 const DonorListings = lazy(() => import("./pages/donor/ListingsPage"));
 const DonorRequestsPage = lazy(() => import("./pages/donor/RequestsPage"));
+const DonorRecurringPage = lazy(() => import("./pages/donor/RecurringPage"));
 const NewListing = lazy(() => import("./pages/donor/NewListingPage"));
 const EditListingPage = lazy(() => import("./pages/donor/EditListingPage"));
 const DonorProfilePage = lazy(() => import("./pages/donor/ProfilePage"));
@@ -51,6 +52,7 @@ export default function App() {
               <Route element={<AppLayout roles={["donor"]} />}>
                 <Route path="/donor/dashboard" element={<DonorDashboard />} />
                 <Route path="/donor/listings" element={<DonorListings />} />
+                <Route path="/donor/recurring" element={<DonorRecurringPage />} />
                 <Route path="/donor/requests" element={<DonorRequestsPage />} />
                 <Route path="/donor/listings/new" element={<NewListing />} />
                 <Route path="/donor/listings/:id/edit" element={<EditListingPage />} />

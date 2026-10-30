@@ -19,7 +19,7 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     CORS(app, origins=app.config["CORS_ORIGINS"], supports_credentials=True)
 
-    from .models import User, Profile, Listing, Request, StatusHistory, Report
+    from .models import User, Profile, Listing, Request, StatusHistory, Report, RecurringDonation
 
     from .auth.routes import auth_bp
     from .api.users import users_bp
@@ -30,6 +30,7 @@ def create_app(config_class=Config):
     from .api.jobs import jobs_bp
     from .api.admin import admin_bp, reports_bp
     from .api.ai import ai_bp
+    from .api.recurring import recurring_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(users_bp, url_prefix="/api/users")
@@ -41,6 +42,7 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
     app.register_blueprint(reports_bp, url_prefix="/api/reports")
     app.register_blueprint(ai_bp, url_prefix="/api/ai")
+    app.register_blueprint(recurring_bp, url_prefix="/api/recurring")
 
     @app.route("/api/health")
     def health():

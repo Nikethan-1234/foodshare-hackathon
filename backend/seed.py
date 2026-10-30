@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from datetime import datetime, timedelta
 from app import create_app, db
-from app.models import User, Profile, Listing, Request, StatusHistory
+from app.models import User, Profile, Listing, Request, StatusHistory, RecurringDonation
 
 DEMO_DISCLAIMER = "DEMO DATA — not for production use"
 
@@ -475,6 +475,34 @@ def seed():
             actor_id=recipient_users[1].id,
             note="Demo request",
         ))
+
+        # Seed Recurring Donations for Institutions
+        print("Seeding recurring donation schedules for institutions...")
+        rec1 = RecurringDonation(
+            donor_id=donor_users[3].id,  # St. Andrew's Church
+            title="Weekly Sunday Community Meal Surplus",
+            description="Fresh wholesome vegetable stew, bread rolls, and rice from the parish lunch program.",
+            day_of_week=6,  # Sunday
+            usual_time="14:00",
+            expected_servings=40,
+            unit="servings",
+            pickup_location="100 Church St, Fellowship Hall kitchen entrance",
+            pickup_window_hours=3,
+            status="ACTIVE",
+        )
+        rec2 = RecurringDonation(
+            donor_id=donor_users[4].id,  # Springfield College Canteen
+            title="Friday Hostel Canteen Surplus",
+            description="Cooked pasta, mixed rice, and bread rolls from campus end-of-week meal prep.",
+            day_of_week=4,  # Friday
+            usual_time="19:30",
+            expected_servings=50,
+            unit="servings",
+            pickup_location="Campus Dining Center, Loading Bay 2",
+            pickup_window_hours=2,
+            status="ACTIVE",
+        )
+        db.session.add_all([rec1, rec2])
 
         db.session.commit()
         print("\n" + "="*60)

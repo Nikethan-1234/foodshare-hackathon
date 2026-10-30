@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, ListPlus, List, Users, ClipboardList,
-  Package, Flag, LogOut, Leaf, Building2, HeartHandshake, Inbox
+  Package, Flag, LogOut, Leaf, Building2, HeartHandshake, Inbox, Repeat
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { clsx } from "../../utils/clsx";
@@ -9,6 +9,7 @@ import { clsx } from "../../utils/clsx";
 const DONOR_LINKS = [
   { to: "/donor/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/donor/listings", label: "My Listings", icon: List },
+  { to: "/donor/recurring", label: "Recurring", icon: Repeat },
   { to: "/donor/requests", label: "Requests", icon: Inbox },
   { to: "/donor/listings/new", label: "New Listing", icon: ListPlus },
   { to: "/donor/profile", label: "Profile", icon: Building2 },
