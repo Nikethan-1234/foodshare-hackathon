@@ -1,4 +1,5 @@
 import { clsx } from "../../utils/clsx";
+import { Zap } from "lucide-react";
 
 const STATUS_STYLES = {
   PENDING_APPROVAL: "bg-purple-50 text-purple-800 border-purple-200",
@@ -106,6 +107,20 @@ export function DonorTypeBadge({ donorType, className = "" }) {
       )}
     >
       {DONOR_TYPE_LABELS[donorType] || donorType}
+    </span>
+  );
+}
+
+export function EventLeftoverBadge({ className = "" }) {
+  return (
+    <span
+      className={clsx(
+        "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border bg-amber-50 text-amber-900 border-amber-300",
+        className
+      )}
+    >
+      <Zap className="h-3 w-3 text-amber-600 flex-shrink-0" />
+      Event Leftover
     </span>
   );
 }

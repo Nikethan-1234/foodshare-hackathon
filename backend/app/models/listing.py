@@ -26,6 +26,7 @@ class Listing(db.Model):
     is_stored_properly = db.Column(db.Boolean, default=True, nullable=False)
     is_not_reheated = db.Column(db.Boolean, default=True, nullable=False)
     is_packaged_cleanly = db.Column(db.Boolean, default=True, nullable=False)
+    is_event_leftover = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -58,6 +59,7 @@ class Listing(db.Model):
                 "not_reheated": self.is_not_reheated,
                 "packaged_cleanly": self.is_packaged_cleanly,
             },
+            "is_event_leftover": bool(self.is_event_leftover),
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }

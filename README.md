@@ -167,12 +167,20 @@ To ensure community safety while enabling households and function hosts to donat
    - Recipients can cancel or reject their pickup requests with an optional reason.
    - Suspicious or unhygienic listings can be reported directly from the browse/detail view with categorized reasons appearing in `/admin/reports`.
 
-> [!TIP]
-> The sign-in page (`/login`) includes **1-click quick-fill buttons** for Donor, Recipient, and Admin accounts.
+---
+
+## 6. Event Leftover Quick-Post (Phase 3)
+
+For urgent surpluses resulting from functions, weddings, community meals, or sudden cancellations:
+- **Prominent Quick-Post Button:** Located on the Donor Dashboard and Listings header with high-contrast amber styling (`Event Leftover`).
+- **Streamlined Quick Form:** Asks only for key details: *What food*, *Estimated Servings*, *Cooked Time*, *Pickup Ends At*, and *Pickup Address*. Pre-fills safe defaults (cooked 1h ago, pickup starts in 15m, ends in 3h).
+- **Safety & Quality Enforcement:** Enforces the same 4-point handling checklist, $\le 4$h cooked food validation, and individual $\ge 10$ servings rule.
+- **Event Leftover Badge:** Tagged with an amber `Event Leftover` badge on recipient browse cards and donor management views.
+- **Automatic Expiry:** Listings automatically transition to `EXPIRED` once the pickup window closes.
 
 ---
 
-## 5. Setup & Running Locally
+## 7. Setup & Running Locally
 
 ### Prerequisites
 - **Python 3.10+**

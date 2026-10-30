@@ -113,6 +113,7 @@ def validate_listing_payload(data, is_create=True):
         "is_stored_properly": stored_properly,
         "is_not_reheated": not_reheated,
         "is_packaged_cleanly": packaged_cleanly,
+        "is_event_leftover": bool(data.get("is_event_leftover", False)),
     }
 
 
@@ -185,6 +186,7 @@ def create_listing():
         is_stored_properly=parsed.get("is_stored_properly", True),
         is_not_reheated=parsed.get("is_not_reheated", True),
         is_packaged_cleanly=parsed.get("is_packaged_cleanly", True),
+        is_event_leftover=parsed.get("is_event_leftover", False),
     )
     db.session.add(listing)
     db.session.flush()

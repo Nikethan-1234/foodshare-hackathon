@@ -10,10 +10,11 @@ import { ErrorState } from "../../components/ui/ErrorState";
 import { PickupCountdown } from "../../components/ui/PickupCountdown";
 import { ImpactCounter } from "../../components/ui/ImpactCounter";
 import { formatDateTime, formatTimeLeft } from "../../utils/format";
+import { EventLeftoverQuickPostModal } from "../../components/donor/EventLeftoverModal";
 import {
   Package, Clock, CheckCircle2, AlertCircle, Plus,
   ArrowRight, ShieldCheck, UserCheck, Inbox,
-  Sparkles, Leaf, Droplets, Award, Printer, Car
+  Sparkles, Leaf, Droplets, Award, Printer, Car, Zap
 } from "lucide-react";
 
 export default function DonorDashboardPage() {
@@ -24,6 +25,7 @@ export default function DonorDashboardPage() {
   const [esg, setEsg] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isQuickPostOpen, setIsQuickPostOpen] = useState(false);
 
   const fetchDashboard = async () => {
     setIsLoading(true);
@@ -66,6 +68,14 @@ export default function DonorDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => setIsQuickPostOpen(true)}
+            className="border-amber-400 bg-amber-50 text-amber-900 hover:bg-amber-100 font-semibold"
+          >
+            <Zap className="h-4 w-4 text-amber-600 fill-amber-500" />
+            Event Leftover
+          </Button>
           <Button onClick={() => navigate("/donor/listings/new")}>
             <Plus className="h-4 w-4" />
             List Surplus Food
@@ -320,6 +330,12 @@ export default function DonorDashboardPage() {
           </Card>
         </div>
       </div>
+      {/* Quick-Post Modal */}
+      <EventLeftoverQuickPostModal
+        isOpen={isQuickPostOpen}
+        onClose={() => setIsQuickPostOpen(false)}
+        onCreated={() => fetchDashboard()}
+      />
     </div>
   );
 }

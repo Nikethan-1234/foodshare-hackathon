@@ -5,7 +5,7 @@ import api from "../../utils/api";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
-import { StatusBadge } from "../../components/ui/Badge";
+import { StatusBadge, EventLeftoverBadge } from "../../components/ui/Badge";
 import { Table, Thead, Th, Tbody, Tr, Td } from "../../components/ui/Table";
 import { Modal } from "../../components/ui/Modal";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -13,9 +13,10 @@ import { LoadingState } from "../../components/ui/LoadingState";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { PickupCountdown } from "../../components/ui/PickupCountdown";
 import { formatDateTime, formatTimeLeft } from "../../utils/format";
+import { EventLeftoverQuickPostModal } from "../../components/donor/EventLeftoverModal";
 import {
   Plus, Search, Edit3, XCircle, Clock, MapPin, Eye,
-  AlertTriangle, Package, Calendar, Sparkles, HeartHandshake, Phone, Send
+  AlertTriangle, Package, Calendar, Sparkles, HeartHandshake, Phone, Send, Zap
 } from "lucide-react";
 
 const STATUS_FILTERS = [
@@ -37,6 +38,7 @@ export default function DonorListingsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [isQuickPostOpen, setIsQuickPostOpen] = useState(false);
 
   // Cancel modal state
   const [cancelModalItem, setCancelModalItem] = useState(null);
@@ -140,10 +142,20 @@ export default function DonorListingsPage() {
             Track surplus food listings, manage pickup times, and review requests.
           </p>
         </div>
-        <Button onClick={() => navigate("/donor/listings/new")}>
-          <Plus className="h-4 w-4" />
-          New Listing
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => setIsQuickPostOpen(true)}
+            className="border-amber-400 bg-amber-50 text-amber-900 hover:bg-amber-100 font-semibold"
+          >
+            <Zap className="h-4 w-4 text-amber-600 fill-amber-500" />
+            Event Leftover
+          </Button>
+          <Button onClick={() => navigate("/donor/listings/new")}>
+            <Plus className="h-4 w-4" />
+            New Listing
+          </Button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -220,7 +232,10 @@ export default function DonorListingsPage() {
                   return (
                     <Tr key={item.id}>
                       <Td className="font-medium text-grey-900 max-w-xs">
-                        <div className="truncate font-semibold">{item.title}</div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="truncate font-semibold">{item.title}</span>
+                          {item.is_event_leftover && <EventLeftoverBadge />}
+                        </div>
                         <div className="text-xs text-grey-400 truncate flex items-center gap-1 mt-0.5">
                           <MapPin className="h-3 w-3 flex-shrink-0" />
                           <span>{item.pickup_location}</span>
@@ -311,9 +326,12 @@ export default function DonorListingsPage() {
               return (
                 <Card key={item.id} padding={false} className="p-4">
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="font-semibold text-sm text-grey-900 leading-snug">
-                      {item.title}
-                    </h3>
+                    <div className="flex flex-col gap-1">
+                      <h3 className="font-semibold text-sm text-grey-900 leading-snug">
+                        {item.title}
+                      </h3>
+                      {item.is_event_leftover && <EventLeftoverBadge />}
+                    </div>
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
                       <StatusBadge status={item.status} />
                       {["AVAILABLE", "RESERVED"].includes(item.status) && (
@@ -467,7 +485,10 @@ export default function DonorListingsPage() {
           <div className="flex flex-col gap-4 text-sm">
             <div className="flex items-start justify-between border-b border-grey-200 pb-3">
               <div>
-                <h3 className="font-semibold text-base text-grey-900">{fullDetail.title}</h3>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h3 className="font-semibold text-base text-grey-900">{fullDetail.title}</h3>
+                  {fullDetail.is_event_leftover && <EventLeftoverBadge />}
+                </div>
                 <p className="text-xs text-grey-500 mt-0.5">ID #{fullDetail.id}</p>
               </div>
               <StatusBadge status={fullDetail.status} />
@@ -647,6 +668,13 @@ export default function DonorListingsPage() {
           </div>
         ) : null}
       </Modal>
+
+      {/* Quick-Post Modal */}
+      <EventLeftoverQuickPostModal
+        isOpen={isQuickPostOpen}
+        onClose={() => setIsQuickPostOpen(false)}
+        onCreated={() => fetchListings()}
+      />
     </div>
   );
 }

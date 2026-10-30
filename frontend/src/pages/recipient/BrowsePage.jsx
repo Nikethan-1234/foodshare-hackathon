@@ -6,7 +6,7 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input, Textarea } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
-import { StatusBadge, DonorTypeBadge } from "../../components/ui/Badge";
+import { StatusBadge, DonorTypeBadge, EventLeftoverBadge } from "../../components/ui/Badge";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { ErrorState } from "../../components/ui/ErrorState";
@@ -257,6 +257,9 @@ export default function BrowsePage() {
                       {item.donor_type && (
                         <DonorTypeBadge donorType={item.donor_type} />
                       )}
+                      {item.is_event_leftover && (
+                        <EventLeftoverBadge />
+                      )}
                     </div>
                     <PickupCountdown pickupEnd={item.pickup_end} />
                   </div>
@@ -466,6 +469,9 @@ export default function BrowsePage() {
                   <p className="text-xs text-grey-500">Offered by {detailItem.donor_name}</p>
                   {detailItem.donor_type && (
                     <DonorTypeBadge donorType={detailItem.donor_type} />
+                  )}
+                  {detailItem.is_event_leftover && (
+                    <EventLeftoverBadge />
                   )}
                 </div>
               </div>
