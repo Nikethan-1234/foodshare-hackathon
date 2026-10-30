@@ -9,7 +9,7 @@ def check_and_expire_listings():
     """
     now = datetime.utcnow()
     expired_listings = Listing.query.filter(
-        Listing.status.in_(["AVAILABLE", "RESERVED"]),
+        Listing.status.in_(["AVAILABLE", "RESERVED", "PENDING_APPROVAL"]),
         Listing.pickup_end <= now
     ).all()
 

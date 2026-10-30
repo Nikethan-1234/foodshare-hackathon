@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import get_jwt_identity
 from app import db
@@ -63,11 +63,38 @@ def validate_listing_payload(data, is_create=True):
         errors["pickup_end"] = "Pickup window cannot end after the food use-by date."
 
     # Phase 2: Cooked food time limit check
-    if is_create and prep_at:
-        max_cooked_hours = current_app.config.get("MAX_COOKED_HOURS_BEFORE_LISTING", 4)
-        hours_ago = (datetime.utcnow() - prep_at).total_seconds() / 3600.0
-        if hours_ago > max_cooked_hours:
-            errors["prepared_at"] = f"Cooked food must be listed within {max_cooked_hours} hours of preparation for food safety. (Prepared {round(hours_ago, 1)} hours ago)."
+    if prep_at:
+        now = datetime.utcnow()
+        if prep_at > now + timedelta(minutes=5):
+            errors["prepared_at"] = "Preparation time cannot be in the future."
+        elif is_create:
+            max_cooked_hours = current_app.config.get("MAX_COOKED_HOURS_BEFORE_LISTING", 4)
+            hours_ago = (now - prep_at).total_seconds() / 3600.0
+            if hours_ago > max_cooked_hours:
+                errors["prepared_at"] = f"Cooked food must be listed within {max_cooked_hours} hours of preparation for food safety. (Prepared {round(hours_ago, 1)} hours ago)."
+
+    # Phase 5: Validate category tags and prep state
+    food_type = (data.get("category_food_type") or "VEG").strip().upper()
+    if food_type not in ["VEG", "NON_VEG"]:
+        errors["category_food_type"] = "Dietary category must be either 'VEG' or 'NON_VEG'."
+
+    prep_state = (data.get("category_prep_state") or "COOKED").strip().upper()
+    if prep_state not in ["COOKED", "PACKAGED"]:
+        errors["category_prep_state"] = "Preparation state must be either 'COOKED' or 'PACKAGED'."
+
+    # Phase 5: Validate image_url format to prevent XSS / malicious schemes
+    raw_img = data.get("image_url", "").strip() if data.get("image_url") else ""
+    if raw_img:
+        allowed_prefix = (
+            "data:image/jpeg;base64,",
+            "data:image/png;base64,",
+            "data:image/webp;base64,",
+            "data:image/jpg;base64,",
+            "https://",
+            "http://",
+        )
+        if not any(raw_img.startswith(prefix) for prefix in allowed_prefix):
+            errors["image_url"] = "Invalid image URL. Must be an HTTP(S) URL or base64 image data URL (JPEG, PNG, WEBP)."
 
     # Phase 2: Handling safety checklist (all 4 required when provided)
     checklist = data.get("handling_checklist")
@@ -343,6 +370,19 @@ def update_listing(listing_id):
             }
         }), 422
 
+    # Phase 2: Enforce individual donor minimum quantity on updates
+    donor = User.query.get(user_id)
+    donor_profile = donor.profile if donor else None
+    if donor_profile and donor_profile.donor_type == "INDIVIDUAL":
+        min_qty = current_app.config.get("INDIVIDUAL_MIN_QUANTITY", 10)
+        if new_total < min_qty:
+            return jsonify({
+                "error": "Validation failed",
+                "fields": {
+                    "quantity_total": f"Individual donors must list at least {min_qty} servings to ensure bulk redistribution efficiency."
+                }
+            }), 422
+
     listing.title = parsed["title"]
     listing.description = parsed["description"]
     listing.unit = parsed["unit"]
@@ -355,6 +395,14 @@ def update_listing(listing_id):
         listing.allergens = parsed["allergens"]
     if "dietary_tags" in parsed:
         listing.dietary_tags = parsed["dietary_tags"]
+    if "category_food_type" in parsed:
+        listing.category_food_type = parsed["category_food_type"]
+    if "category_prep_state" in parsed:
+        listing.category_prep_state = parsed["category_prep_state"]
+    if "allergen_notes" in parsed:
+        listing.allergen_notes = parsed["allergen_notes"]
+    if "image_url" in parsed:
+        listing.image_url = parsed["image_url"]
 
     # Adjust quantity_left
     listing.quantity_total = new_total
@@ -422,12 +470,24 @@ def upload_listing_photo():
     Phase 5: Secure photo upload endpoint for listings.
     Accepts multipart/form-data or JSON base64.
     Limits: max 5MB, types JPEG, PNG, WEBP.
+    Validates magic bytes to prevent file content spoofing.
     Stores and returns a data URL or safe file reference.
     """
     import base64
 
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
     MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+
+    def verify_magic_bytes(raw_bytes, ext):
+        if not raw_bytes or len(raw_bytes) == 0:
+            return False, "Uploaded image is empty."
+        if ext in ["jpg", "jpeg"] and not raw_bytes.startswith(b"\xff\xd8\xff"):
+            return False, "File content is not a valid JPEG image."
+        if ext == "png" and not raw_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+            return False, "File content is not a valid PNG image."
+        if ext == "webp" and (not raw_bytes.startswith(b"RIFF") or b"WEBP" not in raw_bytes[8:16]):
+            return False, "File content is not a valid WEBP image."
+        return True, None
 
     # Check for multipart file
     if "photo" in request.files:
@@ -441,6 +501,10 @@ def upload_listing_photo():
         if len(file_bytes) > MAX_BYTES:
             return jsonify({"error": "File size exceeds 5MB limit."}), 422
 
+        valid, err_msg = verify_magic_bytes(file_bytes, ext)
+        if not valid:
+            return jsonify({"error": err_msg}), 422
+
         mime = f"image/{'jpeg' if ext in ['jpg', 'jpeg'] else ext}"
         b64_str = base64.b64encode(file_bytes).decode("utf-8")
         data_url = f"data:{mime};base64,{b64_str}"
@@ -450,16 +514,28 @@ def upload_listing_photo():
     data = request.get_json() or {}
     data_url = data.get("image_data", "").strip()
     if data_url.startswith("data:image/"):
-        # Validate mime
         header, b64_data = data_url.split(",", 1) if "," in data_url else ("", "")
-        mime_type = header.split(";")[0].replace("data:", "")
-        allowed_mimes = ["image/jpeg", "image/png", "image/webp", "image/jpg"]
+        mime_type = header.split(";")[0].replace("data:", "").lower()
+        allowed_mimes = {
+            "image/jpeg": "jpg",
+            "image/jpg": "jpg",
+            "image/png": "png",
+            "image/webp": "webp"
+        }
         if mime_type not in allowed_mimes:
             return jsonify({"error": f"Invalid image MIME type: {mime_type}. Allowed: JPEG, PNG, WEBP"}), 422
 
-        raw_bytes = base64.b64decode(b64_data)
+        try:
+            raw_bytes = base64.b64decode(b64_data)
+        except Exception:
+            return jsonify({"error": "Invalid base64 encoding."}), 422
+
         if len(raw_bytes) > MAX_BYTES:
             return jsonify({"error": "Image size exceeds 5MB limit."}), 422
+
+        valid, err_msg = verify_magic_bytes(raw_bytes, allowed_mimes[mime_type])
+        if not valid:
+            return jsonify({"error": err_msg}), 422
 
         return jsonify({"image_url": data_url, "size": len(raw_bytes)}), 200
 

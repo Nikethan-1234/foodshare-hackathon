@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity
 from app import db
@@ -146,6 +147,19 @@ def approve_listing(listing_id):
 
     if listing.status != "PENDING_APPROVAL":
         return jsonify({"error": f"Cannot approve listing with status '{listing.status}'. Only PENDING_APPROVAL listings can be approved."}), 400
+
+    if listing.pickup_end <= datetime.utcnow():
+        listing.status = "EXPIRED"
+        db.session.add(StatusHistory(
+            entity_type="listing",
+            entity_id=listing.id,
+            from_status="PENDING_APPROVAL",
+            to_status="EXPIRED",
+            actor_id=admin_id,
+            note="Cannot approve: Listing pickup window has already expired. Marked EXPIRED.",
+        ))
+        db.session.commit()
+        return jsonify({"error": "Cannot approve listing because its pickup window has already passed. It has been marked EXPIRED."}), 400
 
     listing.status = "AVAILABLE"
     db.session.add(StatusHistory(

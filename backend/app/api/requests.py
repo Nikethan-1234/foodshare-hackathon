@@ -199,23 +199,45 @@ def accept_request(request_id):
 
 
 @requests_bp.route("/<int:request_id>/reject", methods=["POST"])
-@role_required("donor")
+@active_user_required
 def reject_request(request_id):
+    """
+    Reject request:
+    - Donor can reject a PENDING incoming request.
+    - Recipient can reject/decline a request they submitted (releasing locked quantity if ACCEPTED).
+    """
     user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
     req = Request.query.get_or_404(request_id)
     listing = req.listing
 
-    if not listing or listing.donor_id != user_id:
-        return jsonify({"error": "You do not own this listing"}), 403
+    is_donor = listing and listing.donor_id == user_id
+    is_recipient = req.recipient_id == user_id
 
-    if req.status != "PENDING":
-        return jsonify({"error": f"Cannot reject request with status '{req.status}'"}), 400
-
-    old_status = req.status
-    req.status = "REJECTED"
+    if not (is_donor or is_recipient or (user and user.role == "admin")):
+        return jsonify({"error": "You do not have permission to reject this request"}), 403
 
     reason = request.get_json().get("reason", "").strip() if request.get_json() else ""
-    note = f"Rejected by donor. {reason}".strip()
+
+    if is_donor:
+        if req.status != "PENDING":
+            return jsonify({"error": f"Cannot reject request with status '{req.status}'. Only PENDING requests can be rejected by donor."}), 400
+        old_status = req.status
+        req.status = "REJECTED"
+        note = f"Rejected by donor. {reason}".strip()
+    else:
+        # Recipient rejecting/declining request
+        if req.status in ["COMPLETED", "REJECTED", "CANCELLED"]:
+            return jsonify({"error": f"Cannot reject a request that is already {req.status.lower()}."}), 400
+        old_status = req.status
+        req.status = "REJECTED"
+        note = f"Rejected by recipient. {reason}".strip()
+
+        # If old status was ACCEPTED, return quantity to the listing
+        if old_status == "ACCEPTED" and listing:
+            listing.quantity_left = min(listing.quantity_left + req.quantity, listing.quantity_total)
+            if listing.status == "RESERVED" and listing.quantity_left > 0:
+                listing.status = "EXPIRED" if listing.pickup_end <= datetime.utcnow() else "AVAILABLE"
 
     db.session.add(StatusHistory(
         entity_type="request",
@@ -227,7 +249,7 @@ def reject_request(request_id):
     ))
 
     db.session.commit()
-    return jsonify({"request": req.to_dict(), "message": "Request rejected"}), 200
+    return jsonify({"request": req.to_dict(), "message": "Request rejected successfully"}), 200
 
 
 @requests_bp.route("/<int:request_id>/complete", methods=["POST"])

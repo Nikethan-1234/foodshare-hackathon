@@ -242,6 +242,147 @@ class TrustAndSafetyTestCase(unittest.TestCase):
         self.assertEqual(res_reject.status_code, 200)
         self.assertEqual(res_reject.get_json()["listing"]["status"], "REMOVED")
 
+    # -------------------------------------------------------------
+    # 7. Recipient Report & Moderation
+    # -------------------------------------------------------------
+    def test_recipient_can_report_listing_and_admin_sees_it(self):
+        """Recipient reports a listing and it appears in admin moderation view."""
+        # Restaurant posts listing
+        payload = self._valid_payload(qty=20)
+        res_listing = self.client.post("/api/listings/", json=payload, headers={"Authorization": f"Bearer {self.rest_token}"})
+        listing_id = res_listing.get_json()["listing"]["id"]
+
+        # Recipient submits report
+        res_report = self.client.post(
+            "/api/reports/",
+            json={
+                "listing_id": listing_id,
+                "reason": "HYGIENE",
+                "detail": "Containers were unsealed when inspected.",
+            },
+            headers={"Authorization": f"Bearer {self.rec_token}"}
+        )
+        self.assertEqual(res_report.status_code, 201)
+        report_data = res_report.get_json()["report"]
+        self.assertEqual(report_data["status"], "OPEN")
+        self.assertEqual(report_data["listing_id"], listing_id)
+
+        # Admin checks moderation view
+        res_admin = self.client.get("/api/admin/reports", headers={"Authorization": f"Bearer {self.admin_token}"})
+        self.assertEqual(res_admin.status_code, 200)
+        reports = res_admin.get_json()["reports"]
+        self.assertTrue(any(r["id"] == report_data["id"] for r in reports))
+
+    # -------------------------------------------------------------
+    # 8. Recipient Rejection of Requests
+    # -------------------------------------------------------------
+    def test_recipient_can_reject_request(self):
+        """Recipient can reject their own request, releasing quantity if accepted."""
+        payload = self._valid_payload(qty=20)
+        res_listing = self.client.post("/api/listings/", json=payload, headers={"Authorization": f"Bearer {self.rest_token}"})
+        listing_id = res_listing.get_json()["listing"]["id"]
+
+        # Recipient creates request for 10 servings
+        res_req = self.client.post("/api/requests/", json={"listing_id": listing_id, "quantity": 10}, headers={"Authorization": f"Bearer {self.rec_token}"})
+        req_id = res_req.get_json()["request"]["id"]
+
+        # Donor accepts
+        self.client.post(f"/api/requests/{req_id}/accept", headers={"Authorization": f"Bearer {self.rest_token}"})
+
+        # Recipient rejects request
+        res_reject = self.client.post(
+            f"/api/requests/{req_id}/reject",
+            json={"reason": "Cannot send delivery driver on time."},
+            headers={"Authorization": f"Bearer {self.rec_token}"}
+        )
+        self.assertEqual(res_reject.status_code, 200)
+        self.assertEqual(res_reject.get_json()["request"]["status"], "REJECTED")
+
+        # Listing quantity_left returned back to 20
+        res_l = self.client.get(f"/api/listings/{listing_id}", headers={"Authorization": f"Bearer {self.rest_token}"})
+        self.assertEqual(res_l.get_json()["listing"]["quantity_left"], 20)
+
+    # -------------------------------------------------------------
+    # 9. Individual Minimum Quantity on Update
+    # -------------------------------------------------------------
+    def test_individual_minimum_quantity_enforced_on_update(self):
+        """Individual cannot bypass minimum quantity by editing listing to < 10 servings."""
+        payload = self._valid_payload(qty=15)
+        res_create = self.client.post("/api/listings/", json=payload, headers={"Authorization": f"Bearer {self.verified_token}"})
+        listing_id = res_create.get_json()["listing"]["id"]
+
+        # Try updating to 5 servings
+        payload_update = self._valid_payload(qty=5)
+        res_update = self.client.put(f"/api/listings/{listing_id}", json=payload_update, headers={"Authorization": f"Bearer {self.verified_token}"})
+        self.assertEqual(res_update.status_code, 422)
+        self.assertIn("quantity_total", res_update.get_json()["fields"])
+
+    # -------------------------------------------------------------
+    # 10. Future Prepared Time Validation
+    # -------------------------------------------------------------
+    def test_future_prepared_at_rejected(self):
+        """Food prepared in the future is rejected with 422."""
+        now = datetime.utcnow()
+        payload = self._valid_payload(qty=15)
+        payload["prepared_at"] = (now + timedelta(hours=2)).isoformat()
+        res = self.client.post("/api/listings/", json=payload, headers={"Authorization": f"Bearer {self.verified_token}"})
+        self.assertEqual(res.status_code, 422)
+        self.assertIn("prepared_at", res.get_json()["fields"])
+
+    # -------------------------------------------------------------
+    # 11. Expired PENDING_APPROVAL Listing Cannot be Approved
+    # -------------------------------------------------------------
+    def test_expired_pending_approval_cannot_be_approved(self):
+        """Admin cannot approve a listing whose pickup window has already expired."""
+        now = datetime.utcnow()
+        with self.app.app_context():
+            user = User.query.filter_by(email="indiv_verified@demo.local").first()
+            l = Listing(
+                donor_id=user.id,
+                title="Expired Pending Dish",
+                quantity_total=12,
+                quantity_left=12,
+                prepared_at=now - timedelta(hours=3),
+                use_by=now - timedelta(hours=1),
+                pickup_location="Home",
+                pickup_start=now - timedelta(hours=2),
+                pickup_end=now - timedelta(minutes=10),
+                status="PENDING_APPROVAL",
+            )
+            db.session.add(l)
+            db.session.commit()
+            lid = l.id
+
+        res_approve = self.client.post(f"/api/admin/listings/{lid}/approve", headers={"Authorization": f"Bearer {self.admin_token}"})
+        self.assertEqual(res_approve.status_code, 400)
+        self.assertIn("expired", res_approve.get_json()["error"].lower())
+
+    # -------------------------------------------------------------
+    # 12. Photo Upload Magic Bytes Security
+    # -------------------------------------------------------------
+    def test_photo_upload_magic_bytes_security(self):
+        """Photo upload rejects empty files and spoofed content."""
+        import io
+        # Empty file
+        data = {"photo": (io.BytesIO(b""), "test.png")}
+        res_empty = self.client.post(
+            "/api/listings/upload-photo",
+            data=data,
+            content_type="multipart/form-data",
+            headers={"Authorization": f"Bearer {self.rest_token}"}
+        )
+        self.assertEqual(res_empty.status_code, 422)
+
+        # Invalid spoofed file: text content renamed to .png
+        data_spoofed = {"photo": (io.BytesIO(b"MALICIOUS SCRIPT CONTENT"), "fake.png")}
+        res_spoofed = self.client.post(
+            "/api/listings/upload-photo",
+            data=data_spoofed,
+            content_type="multipart/form-data",
+            headers={"Authorization": f"Bearer {self.rest_token}"}
+        )
+        self.assertEqual(res_spoofed.status_code, 422)
+
 
 if __name__ == "__main__":
     unittest.main()
