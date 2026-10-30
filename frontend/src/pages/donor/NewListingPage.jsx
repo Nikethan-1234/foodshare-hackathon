@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { useLanguage } from "../../context/LanguageContext";
 import api from "../../utils/api";
 import { Card, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Input, Textarea } from "../../components/ui/Input";
@@ -26,6 +27,7 @@ export default function NewListingPage() {
   const navigate = useNavigate();
   const { profile, updateProfile } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const isIndividual = profile?.donor_type === "INDIVIDUAL";
 
@@ -459,11 +461,11 @@ export default function NewListingPage() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Package className="h-4 w-4 text-green-600" />
-              <h2 className="text-sm font-semibold text-grey-900 uppercase tracking-wide">Food Details</h2>
+              <h2 className="text-sm font-semibold text-grey-900 uppercase tracking-wide">{t("sec_food_details")}</h2>
             </div>
             <div className="flex flex-col gap-3">
               <Input
-                label="Listing Title"
+                label={t("field_title")}
                 value={form.title}
                 onChange={handleChange("title")}
                 error={errors.title}
@@ -474,7 +476,7 @@ export default function NewListingPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
-                  label={`Total Quantity ${isIndividual ? "(Min 10 for individuals)" : ""}`}
+                  label={`${t("field_servings")} ${isIndividual ? "(Min 10)" : ""}`}
                   type="number"
                   min={isIndividual ? "10" : "1"}
                   step="1"
@@ -486,7 +488,7 @@ export default function NewListingPage() {
                   required
                 />
                 <Select
-                  label="Unit"
+                  label={t("field_unit")}
                   value={form.unit}
                   onChange={handleChange("unit")}
                   options={UNIT_OPTIONS}
@@ -500,8 +502,8 @@ export default function NewListingPage() {
                   value={form.category_food_type}
                   onChange={handleChange("category_food_type")}
                   options={[
-                    { value: "VEG", label: "🟢 Vegetarian (Veg)" },
-                    { value: "NON_VEG", label: "🔴 Non-Vegetarian (Non-Veg)" },
+                    { value: "VEG", label: `🟢 ${t("food_veg")}` },
+                    { value: "NON_VEG", label: `🔴 ${t("food_non_veg")}` },
                   ]}
                   required
                 />
@@ -510,15 +512,15 @@ export default function NewListingPage() {
                   value={form.category_prep_state}
                   onChange={handleChange("category_prep_state")}
                   options={[
-                    { value: "COOKED", label: "🍲 Freshly Cooked Meal" },
-                    { value: "PACKAGED", label: "📦 Packaged / Shelf-Stable Goods" },
+                    { value: "COOKED", label: `🍲 ${t("food_cooked")}` },
+                    { value: "PACKAGED", label: `📦 ${t("food_packaged")}` },
                   ]}
                   required
                 />
               </div>
 
               <Input
-                label="Allergen Notes (Optional)"
+                label={t("field_allergen_notes")}
                 value={form.allergen_notes}
                 onChange={handleChange("allergen_notes")}
                 placeholder="e.g. Contains nuts, dairy, mustard seeds, or gluten"
@@ -546,7 +548,7 @@ export default function NewListingPage() {
               )}
 
               <Textarea
-                label="Description & Ingredients"
+                label={t("field_description")}
                 value={form.description}
                 onChange={handleChange("description")}
                 error={errors.description}
@@ -560,11 +562,11 @@ export default function NewListingPage() {
           <div className="border-t border-grey-200 pt-4">
             <div className="flex items-center gap-2 mb-3">
               <Clock className="h-4 w-4 text-green-600" />
-              <h2 className="text-sm font-semibold text-grey-900 uppercase tracking-wide">Preparation & Freshness</h2>
+              <h2 className="text-sm font-semibold text-grey-900 uppercase tracking-wide">{t("sec_prep_freshness")}</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
-                label="Prepared At (Must be within 4 hours)"
+                label={`${t("field_cooked_time")} (Must be within 4 hours)`}
                 type="datetime-local"
                 value={form.prepared_at}
                 onChange={handleChange("prepared_at")}
@@ -573,7 +575,7 @@ export default function NewListingPage() {
                 required
               />
               <Input
-                label="Best Before / Use By"
+                label={t("field_use_by")}
                 type="datetime-local"
                 value={form.use_by}
                 onChange={handleChange("use_by")}
@@ -588,11 +590,11 @@ export default function NewListingPage() {
           <div className="border-t border-grey-200 pt-4">
             <div className="flex items-center gap-2 mb-3">
               <MapPin className="h-4 w-4 text-green-600" />
-              <h2 className="text-sm font-semibold text-grey-900 uppercase tracking-wide">Pickup Window & Location</h2>
+              <h2 className="text-sm font-semibold text-grey-900 uppercase tracking-wide">{t("sec_pickup_window")}</h2>
             </div>
             <div className="flex flex-col gap-3">
               <Input
-                label="Pickup Location & Instructions"
+                label={t("field_address")}
                 value={form.pickup_location}
                 onChange={handleChange("pickup_location")}
                 error={errors.pickup_location}
@@ -603,7 +605,7 @@ export default function NewListingPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
-                  label="Pickup Window Start"
+                  label={t("field_pickup_start")}
                   type="datetime-local"
                   value={form.pickup_start}
                   onChange={handleChange("pickup_start")}
@@ -611,7 +613,7 @@ export default function NewListingPage() {
                   required
                 />
                 <Input
-                  label="Pickup Window End"
+                  label={t("field_pickup_end")}
                   type="datetime-local"
                   value={form.pickup_end}
                   onChange={handleChange("pickup_end")}
@@ -628,11 +630,11 @@ export default function NewListingPage() {
             <div className="flex items-center gap-2 mb-2">
               <ShieldCheck className="h-4 w-4 text-green-600" />
               <h2 className="text-sm font-semibold text-grey-900 uppercase tracking-wide">
-                Food Safety Handling Checklist (Required)
+                {t("sec_checklist")}
               </h2>
             </div>
             <p className="text-xs text-grey-500 mb-3">
-              All 4 boxes must be verified and checked to guarantee food safety compliance before publishing.
+              {t("checklist_desc")}
             </p>
 
             {errors.handling_checklist && (
@@ -651,7 +653,7 @@ export default function NewListingPage() {
                   className="mt-0.5 h-4 w-4 rounded border-grey-300 text-green-600 focus:ring-green-500"
                 />
                 <span className="text-grey-800">
-                  <strong>Food is covered:</strong> Stored in food-grade covered containers, sealed foil trays, or wrapped.
+                  {t("chk_covered")}
                 </span>
               </label>
 
@@ -663,7 +665,7 @@ export default function NewListingPage() {
                   className="mt-0.5 h-4 w-4 rounded border-grey-300 text-green-600 focus:ring-green-500"
                 />
                 <span className="text-grey-800">
-                  <strong>Properly temperature-controlled:</strong> Kept safely hot (&gt;60°C) or promptly refrigerated (&lt;5°C); never left at room temperature.
+                  {t("chk_stored")}
                 </span>
               </label>
 
@@ -675,7 +677,7 @@ export default function NewListingPage() {
                   className="mt-0.5 h-4 w-4 rounded border-grey-300 text-green-600 focus:ring-green-500"
                 />
                 <span className="text-grey-800">
-                  <strong>Not repeatedly reheated:</strong> Food was cooked once and has not undergone repeated heating and cooling cycles.
+                  {t("chk_not_reheated")}
                 </span>
               </label>
 
@@ -687,7 +689,7 @@ export default function NewListingPage() {
                   className="mt-0.5 h-4 w-4 rounded border-grey-300 text-green-600 focus:ring-green-500"
                 />
                 <span className="text-grey-800">
-                  <strong>Packaged cleanly:</strong> Handled in a hygienic kitchen with clean utensils and sanitized hands/gloves.
+                  {t("chk_packaged")}
                 </span>
               </label>
             </div>
@@ -699,14 +701,14 @@ export default function NewListingPage() {
               type="button"
               onClick={() => navigate("/donor/listings")}
             >
-              Cancel
+              {t("btn_cancel")}
             </Button>
             <Button
               type="submit"
               isLoading={isSubmitting}
               disabled={isIndividual && !profile?.phone_verified}
             >
-              Publish Listing
+              {t("btn_publish_listing")}
             </Button>
           </div>
         </form>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "../../context/ToastContext";
+import { useLanguage } from "../../context/LanguageContext";
 import api from "../../utils/api";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -30,6 +31,7 @@ const STATUS_FILTERS = [
 export default function RequestsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const [requests, setRequests] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState("ALL");
@@ -130,20 +132,27 @@ export default function RequestsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-grey-900">My Food Requests</h1>
+          <h1 className="text-xl font-semibold text-grey-900">{t("requests_title")}</h1>
           <p className="text-sm text-grey-500">
-            Track status of food requests, coordinate pickup schedules, and contact donors.
+            {t("requests_subtitle")}
           </p>
         </div>
         <Button onClick={() => navigate("/recipient/browse")}>
           <Package className="h-4 w-4" />
-          Browse Surplus Food
+          {t("nav_browse")}
         </Button>
       </div>
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1 mb-6">
-        {STATUS_FILTERS.map((f) => (
+        {[
+          { id: "ALL", label: t("filter_all_requests") },
+          { id: "PENDING", label: t("status_pending") },
+          { id: "ACCEPTED", label: t("status_accepted") },
+          { id: "COMPLETED", label: t("status_completed") },
+          { id: "CANCELLED", label: t("status_cancelled") },
+          { id: "REJECTED", label: t("status_rejected") },
+        ].map((f) => (
           <button
             key={f.id}
             onClick={() => setSelectedStatus(f.id)}
@@ -254,7 +263,7 @@ export default function RequestsPage() {
                               title="Confirm food pickup received"
                             >
                               <CheckCircle2 className="h-3.5 w-3.5" />
-                              Confirm Received
+                              {t("btn_confirm_pickup")}
                             </Button>
                           )}
                           {canCancel && (
@@ -267,7 +276,7 @@ export default function RequestsPage() {
                               }}
                             >
                               <XCircle className="h-3.5 w-3.5" />
-                              Cancel
+                              {t("btn_cancel")}
                             </Button>
                           )}
                           <button
@@ -352,7 +361,7 @@ export default function RequestsPage() {
                         className="bg-sky-600 hover:bg-sky-700 text-white border-sky-700"
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" />
-                        Confirm Received
+                        {t("btn_confirm_pickup")}
                       </Button>
                     )}
                     {canCancel && (
@@ -365,7 +374,7 @@ export default function RequestsPage() {
                         }}
                       >
                         <XCircle className="h-3.5 w-3.5" />
-                        Cancel
+                        {t("btn_cancel")}
                       </Button>
                     )}
                   </div>

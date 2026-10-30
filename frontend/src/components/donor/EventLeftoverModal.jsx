@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { useLanguage } from "../../context/LanguageContext";
 import api from "../../utils/api";
 import { Modal } from "../../components/ui/Modal";
 import { Input, Textarea } from "../../components/ui/Input";
@@ -16,6 +17,7 @@ export function EventLeftoverQuickPostModal({ isOpen, onClose, onCreated }) {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const isIndividual = profile?.donor_type === "INDIVIDUAL";
 
@@ -127,16 +129,16 @@ export function EventLeftoverQuickPostModal({ isOpen, onClose, onCreated }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Event Leftover Quick-Post"
+      title={t("event_leftover_modal_title")}
       size="md"
       footer={
         <div className="flex items-center justify-between w-full">
           <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
-            Cancel
+            {t("btn_cancel")}
           </Button>
           <Button onClick={handleSubmit} isLoading={isSubmitting}>
             <Zap className="h-4 w-4" />
-            Post Leftover Now
+            {t("btn_post_leftover_now")}
           </Button>
         </div>
       }
@@ -145,7 +147,7 @@ export function EventLeftoverQuickPostModal({ isOpen, onClose, onCreated }) {
         <div className="p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900 flex items-start gap-2">
           <Zap className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
           <div>
-            <strong>Quick Event Dispatch:</strong> Designed for functions, weddings, community meals, or hostel surplus. Posts automatically expire at the end of the pickup window.
+            <strong>Quick Event Dispatch:</strong> {t("event_leftover_banner")}
           </div>
         </div>
 
@@ -158,7 +160,7 @@ export function EventLeftoverQuickPostModal({ isOpen, onClose, onCreated }) {
 
         {/* What */}
         <Input
-          label="What surplus food do you have?"
+          label={t("event_what_label")}
           placeholder="e.g. Mixed Rice, Paneer Curry & Naan from reception"
           value={form.title}
           onChange={(e) => handleFieldChange("title", e.target.value)}
@@ -169,7 +171,7 @@ export function EventLeftoverQuickPostModal({ isOpen, onClose, onCreated }) {
         {/* Servings */}
         <div>
           <Input
-            label="Estimated Servings"
+            label={t("field_servings")}
             type="number"
             min={isIndividual ? "10" : "1"}
             value={form.servings}
@@ -183,7 +185,7 @@ export function EventLeftoverQuickPostModal({ isOpen, onClose, onCreated }) {
         {/* Cooked Time */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
-            label="When was it cooked?"
+            label={t("event_cooked_label")}
             type="datetime-local"
             value={form.cooked_time}
             onChange={(e) => handleFieldChange("cooked_time", e.target.value)}
@@ -192,7 +194,7 @@ export function EventLeftoverQuickPostModal({ isOpen, onClose, onCreated }) {
             required
           />
           <Input
-            label="Pickup Ends At (Auto-expires)"
+            label={t("event_pickup_end_label")}
             type="datetime-local"
             value={form.pickup_end}
             onChange={(e) => handleFieldChange("pickup_end", e.target.value)}
@@ -204,7 +206,7 @@ export function EventLeftoverQuickPostModal({ isOpen, onClose, onCreated }) {
 
         {/* Address */}
         <Input
-          label="Pickup Address"
+          label={t("field_address")}
           placeholder="Hall name, door number, street, landmark"
           value={form.address}
           onChange={(e) => handleFieldChange("address", e.target.value)}
@@ -216,7 +218,7 @@ export function EventLeftoverQuickPostModal({ isOpen, onClose, onCreated }) {
         <div className="p-3 bg-grey-50 rounded border border-grey-200">
           <div className="flex items-center gap-1.5 font-semibold text-xs text-grey-800 mb-2">
             <ShieldCheck className="h-4 w-4 text-green-700" />
-            <span>Food Safety Checklist (All Required)</span>
+            <span>{t("sec_checklist")}</span>
           </div>
           <div className="space-y-1.5 text-xs text-grey-700">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -226,7 +228,7 @@ export function EventLeftoverQuickPostModal({ isOpen, onClose, onCreated }) {
                 onChange={() => handleChecklistChange("covered")}
                 className="h-3.5 w-3.5 text-green-600 rounded border-grey-300 focus:ring-green-600"
               />
-              <span>Food has been covered continuously</span>
+              <span>{t("chk_covered")}</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -235,7 +237,7 @@ export function EventLeftoverQuickPostModal({ isOpen, onClose, onCreated }) {
                 onChange={() => handleChecklistChange("stored_properly")}
                 className="h-3.5 w-3.5 text-green-600 rounded border-grey-300 focus:ring-green-600"
               />
-              <span>Stored at safe temperature (cold or hot)</span>
+              <span>{t("chk_stored")}</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -244,7 +246,7 @@ export function EventLeftoverQuickPostModal({ isOpen, onClose, onCreated }) {
                 onChange={() => handleChecklistChange("not_reheated")}
                 className="h-3.5 w-3.5 text-green-600 rounded border-grey-300 focus:ring-green-600"
               />
-              <span>Food has not been previously reheated</span>
+              <span>{t("chk_not_reheated")}</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -253,7 +255,7 @@ export function EventLeftoverQuickPostModal({ isOpen, onClose, onCreated }) {
                 onChange={() => handleChecklistChange("packaged_cleanly")}
                 className="h-3.5 w-3.5 text-green-600 rounded border-grey-300 focus:ring-green-600"
               />
-              <span>Clean food-grade containers or packaging used</span>
+              <span>{t("chk_packaged")}</span>
             </label>
           </div>
         </div>

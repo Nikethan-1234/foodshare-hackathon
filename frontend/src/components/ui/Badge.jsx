@@ -1,5 +1,6 @@
 import { clsx } from "../../utils/clsx";
 import { Zap } from "lucide-react";
+import { useLanguage } from "../../context/LanguageContext";
 
 const STATUS_STYLES = {
   PENDING_APPROVAL: "bg-purple-50 text-purple-800 border-purple-200",
@@ -53,8 +54,24 @@ const STATUS_LABELS = {
 };
 
 export function StatusBadge({ status, className = "", showDot = true }) {
+  const { t } = useLanguage();
   const style = STATUS_STYLES[status] || "bg-grey-100 text-grey-500 border-grey-200";
   const dot = STATUS_DOTS[status] || "bg-grey-400";
+
+  const keyMap = {
+    PENDING_APPROVAL: "status_pending_approval",
+    AVAILABLE: "status_available",
+    RESERVED: "status_reserved",
+    COMPLETED: "status_completed",
+    EXPIRED: "status_expired",
+    REMOVED: "status_removed",
+    PENDING: "status_pending",
+    ACCEPTED: "status_accepted",
+    REJECTED: "status_rejected",
+    CANCELLED: "status_cancelled",
+  };
+
+  const label = keyMap[status] ? t(keyMap[status]) : (STATUS_LABELS[status] || status);
 
   return (
     <span
@@ -65,7 +82,7 @@ export function StatusBadge({ status, className = "", showDot = true }) {
       )}
     >
       {showDot && <span className={clsx("h-1.5 w-1.5 rounded-full flex-shrink-0", dot)} aria-hidden="true" />}
-      {STATUS_LABELS[status] || status}
+      {label}
     </span>
   );
 }
@@ -96,8 +113,14 @@ const DONOR_TYPE_LABELS = {
 };
 
 export function DonorTypeBadge({ donorType, className = "" }) {
+  const { t } = useLanguage();
   if (!donorType) return null;
   const style = DONOR_TYPE_STYLES[donorType] || "bg-grey-100 text-grey-500 border-grey-200";
+  const labelMap = {
+    RESTAURANT: t("donor_type_restaurant"),
+    INSTITUTION: t("donor_type_institution"),
+    INDIVIDUAL: t("donor_type_individual"),
+  };
   return (
     <span
       className={clsx(
@@ -106,12 +129,13 @@ export function DonorTypeBadge({ donorType, className = "" }) {
         className
       )}
     >
-      {DONOR_TYPE_LABELS[donorType] || donorType}
+      {labelMap[donorType] || DONOR_TYPE_LABELS[donorType] || donorType}
     </span>
   );
 }
 
 export function EventLeftoverBadge({ className = "" }) {
+  const { t } = useLanguage();
   return (
     <span
       className={clsx(
@@ -120,12 +144,13 @@ export function EventLeftoverBadge({ className = "" }) {
       )}
     >
       <Zap className="h-3 w-3 text-amber-600 flex-shrink-0" />
-      Event Leftover
+      {t("btn_event_leftover")}
     </span>
   );
 }
 
 export function FoodCategoryBadge({ foodType, className = "" }) {
+  const { t } = useLanguage();
   const isVeg = foodType === "VEG";
   return (
     <span
@@ -136,15 +161,16 @@ export function FoodCategoryBadge({ foodType, className = "" }) {
           : "bg-red-50 text-red-800 border-red-300",
         className
       )}
-      title={isVeg ? "Vegetarian Food" : "Non-Vegetarian Food"}
+      title={isVeg ? t("food_veg") : t("food_non_veg")}
     >
       <span className={clsx("h-1.5 w-1.5 rounded-full", isVeg ? "bg-green-600" : "bg-red-600")} />
-      {isVeg ? "Veg" : "Non-Veg"}
+      {isVeg ? t("food_veg") : t("food_non_veg")}
     </span>
   );
 }
 
 export function PrepStateBadge({ prepState, className = "" }) {
+  const { t } = useLanguage();
   const isCooked = prepState === "COOKED";
   return (
     <span
@@ -156,7 +182,7 @@ export function PrepStateBadge({ prepState, className = "" }) {
         className
       )}
     >
-      {isCooked ? "Cooked Meal" : "Packaged Goods"}
+      {isCooked ? t("food_cooked") : t("food_packaged")}
     </span>
   );
 }

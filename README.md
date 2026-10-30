@@ -202,6 +202,22 @@ Enriched listing quality and transparency for recipients:
 
 ---
 
+## 10. Multi-Language Support (Phase 6)
+
+The platform provides a native, low-latency internationalization (i18n) layer supporting three languages:
+- **English (`en`)**
+- **Telugu (`te` — తెలుగు)**
+- **Hindi (`hi` — हिन्दी)**
+
+### Key Features
+1. **Key-based Architecture:** Implemented via React Context (`LanguageContext.jsx`) with key-based string lookups (`t("key")`).
+2. **Instant Language Switcher:** A prominent language toggle button group is situated in the desktop sidebar and mobile header.
+3. **Local Storage Persistence:** Language preferences are persisted in `localStorage` under `foodshare_language` and restored across sessions.
+4. **Resilient Fallback:** Any missing translation key gracefully falls back to the standard English string.
+5. **Coverage:** Main navigation menus, listing creation and quick-post forms, request modals and tables, and status/donor-type/category badges.
+
+---
+
 ## 9. Setup & Running Locally
 
 ### Prerequisites

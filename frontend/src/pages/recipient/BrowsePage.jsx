@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "../../context/ToastContext";
+import { useLanguage } from "../../context/LanguageContext";
 import api from "../../utils/api";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -29,6 +30,7 @@ const UNIT_FILTERS = [
 export default function BrowsePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const [listings, setListings] = useState([]);
   const [upcomingRecurring, setUpcomingRecurring] = useState([]);
@@ -183,13 +185,13 @@ export default function BrowsePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-grey-900">Browse Available Food</h1>
+          <h1 className="text-xl font-semibold text-grey-900">{t("nav_browse")}</h1>
           <p className="text-sm text-grey-500">
             Fresh surplus prepared food, bakery goods, and produce from local donors ready for pickup.
           </p>
         </div>
         <Button variant="secondary" onClick={() => navigate("/recipient/requests")}>
-          View My Requests
+          {t("btn_view_requests")}
         </Button>
       </div>
 
@@ -245,7 +247,7 @@ export default function BrowsePage() {
               selectedFoodType === "ALL" ? "bg-green-600 text-white border-green-600" : "bg-white text-grey-700 border-grey-300 hover:bg-grey-50"
             }`}
           >
-            All Diet
+            {t("all_diet")}
           </button>
           <button
             onClick={() => setSelectedFoodType("VEG")}
@@ -253,7 +255,7 @@ export default function BrowsePage() {
               selectedFoodType === "VEG" ? "bg-green-700 text-white border-green-700" : "bg-white text-grey-700 border-grey-300 hover:bg-grey-50"
             }`}
           >
-            🟢 Veg Only
+            🟢 {t("food_veg")}
           </button>
           <button
             onClick={() => setSelectedFoodType("NON_VEG")}
@@ -261,7 +263,7 @@ export default function BrowsePage() {
               selectedFoodType === "NON_VEG" ? "bg-red-700 text-white border-red-700" : "bg-white text-grey-700 border-grey-300 hover:bg-grey-50"
             }`}
           >
-            🔴 Non-Veg
+            🔴 {t("food_non_veg")}
           </button>
         </div>
 
@@ -273,7 +275,7 @@ export default function BrowsePage() {
               selectedPrepState === "ALL" ? "bg-green-600 text-white border-green-600" : "bg-white text-grey-700 border-grey-300 hover:bg-grey-50"
             }`}
           >
-            All States
+            {t("all_states")}
           </button>
           <button
             onClick={() => setSelectedPrepState("COOKED")}
@@ -281,7 +283,7 @@ export default function BrowsePage() {
               selectedPrepState === "COOKED" ? "bg-amber-700 text-white border-amber-700" : "bg-white text-grey-700 border-grey-300 hover:bg-grey-50"
             }`}
           >
-            🍲 Cooked
+            🍲 {t("food_cooked")}
           </button>
           <button
             onClick={() => setSelectedPrepState("PACKAGED")}
@@ -289,7 +291,7 @@ export default function BrowsePage() {
               selectedPrepState === "PACKAGED" ? "bg-blue-700 text-white border-blue-700" : "bg-white text-grey-700 border-grey-300 hover:bg-grey-50"
             }`}
           >
-            📦 Packaged
+            📦 {t("food_packaged")}
           </button>
         </div>
       </div>
@@ -491,7 +493,7 @@ export default function BrowsePage() {
       <Modal
         isOpen={!!requestTarget}
         onClose={() => setRequestTarget(null)}
-        title="Request Food for Pickup"
+        title={t("request_modal_title")}
         size="md"
         footer={
           <>
@@ -500,13 +502,13 @@ export default function BrowsePage() {
               onClick={() => setRequestTarget(null)}
               disabled={isSubmittingRequest}
             >
-              Cancel
+              {t("btn_cancel")}
             </Button>
             <Button
               onClick={handleSubmitRequest}
               isLoading={isSubmittingRequest}
             >
-              Submit Request
+              {t("btn_submit")}
             </Button>
           </>
         }
@@ -533,7 +535,7 @@ export default function BrowsePage() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-sm font-medium text-grey-700">
-                  Quantity Desired ({requestTarget.unit})
+                  {t("request_qty_label")} ({requestTarget.unit})
                 </label>
                 <div className="flex items-center gap-1">
                   <button
@@ -567,7 +569,7 @@ export default function BrowsePage() {
             </div>
 
             <Textarea
-              label="Pickup Note / Special Logistics (Optional)"
+              label={t("request_notes_label")}
               value={requestNote}
               onChange={(e) => setRequestNote(e.target.value)}
               placeholder="e.g. Hope Community Kitchen van will arrive around 2:30 PM. Driver contact: Dave (+1-555-0199). We will bring insulated food carriers."
@@ -581,17 +583,17 @@ export default function BrowsePage() {
       <Modal
         isOpen={!!detailItem}
         onClose={() => setDetailItem(null)}
-        title="Food Surplus Details"
+        title={t("btn_details")}
         size="lg"
         footer={
           <div className="flex items-center justify-between w-full">
             <Button variant="secondary" onClick={() => setDetailItem(null)}>
-              Close
+              {t("btn_close")}
             </Button>
             {detailItem && !detailItem.my_request && (
               <Button onClick={() => handleOpenRequest(detailItem)}>
                 <Send className="h-4 w-4" />
-                Request Food
+                {t("btn_request_food")}
               </Button>
             )}
           </div>

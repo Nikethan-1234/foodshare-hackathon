@@ -1,34 +1,36 @@
 import { NavLink } from "react-router-dom";
 import { LayoutDashboard, List, ListPlus, Package, ClipboardList, Users, Flag, Building2, HeartHandshake, Inbox } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useLanguage } from "../../context/LanguageContext";
 import { clsx } from "../../utils/clsx";
-
-const DONOR_TABS = [
-  { to: "/donor/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/donor/listings", label: "Listings", icon: List },
-  { to: "/donor/requests", label: "Requests", icon: Inbox },
-  { to: "/donor/listings/new", label: "New", icon: ListPlus },
-  { to: "/donor/profile", label: "Profile", icon: Building2 },
-];
-
-const RECIPIENT_TABS = [
-  { to: "/recipient/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/recipient/browse", label: "Browse", icon: Package },
-  { to: "/recipient/requests", label: "Requests", icon: ClipboardList },
-  { to: "/recipient/profile", label: "Profile", icon: HeartHandshake },
-];
-
-const ADMIN_TABS = [
-  { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/admin/listings", label: "Listings", icon: List },
-  { to: "/admin/users", label: "Users", icon: Users },
-  { to: "/admin/reports", label: "Reports", icon: Flag },
-];
-
-const ROLE_TABS = { donor: DONOR_TABS, recipient: RECIPIENT_TABS, admin: ADMIN_TABS };
 
 export function BottomNav() {
   const { user } = useAuth();
+  const { t } = useLanguage();
+
+  const DONOR_TABS = [
+    { to: "/donor/dashboard", label: t("nav_dashboard"), icon: LayoutDashboard },
+    { to: "/donor/listings", label: t("nav_listings"), icon: List },
+    { to: "/donor/requests", label: t("nav_requests"), icon: Inbox },
+    { to: "/donor/listings/new", label: t("nav_new_listing"), icon: ListPlus },
+    { to: "/donor/profile", label: t("nav_profile"), icon: Building2 },
+  ];
+
+  const RECIPIENT_TABS = [
+    { to: "/recipient/dashboard", label: t("nav_dashboard"), icon: LayoutDashboard },
+    { to: "/recipient/browse", label: t("nav_browse"), icon: Package },
+    { to: "/recipient/requests", label: t("nav_my_requests"), icon: ClipboardList },
+    { to: "/recipient/profile", label: t("nav_profile"), icon: HeartHandshake },
+  ];
+
+  const ADMIN_TABS = [
+    { to: "/admin/dashboard", label: t("nav_dashboard"), icon: LayoutDashboard },
+    { to: "/admin/listings", label: t("nav_listings"), icon: List },
+    { to: "/admin/users", label: t("nav_users"), icon: Users },
+    { to: "/admin/reports", label: t("nav_reports"), icon: Flag },
+  ];
+
+  const ROLE_TABS = { donor: DONOR_TABS, recipient: RECIPIENT_TABS, admin: ADMIN_TABS };
   const tabs = ROLE_TABS[user?.role] || [];
 
   return (

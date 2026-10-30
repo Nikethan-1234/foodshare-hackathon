@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
+import { LanguageProvider } from "./context/LanguageContext";
 import { AppLayout } from "./components/layout/AppLayout";
 import { PageLoading } from "./components/ui/LoadingState";
 
@@ -37,9 +38,10 @@ const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider>
-          <Suspense fallback={<PageLoading />}>
+      <LanguageProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <Suspense fallback={<PageLoading />}>
             <Routes>
               {/* Root redirect */}
               <Route path="/" element={<Navigate to="/login" replace />} />
@@ -82,6 +84,7 @@ export default function App() {
           </Suspense>
         </ToastProvider>
       </AuthProvider>
-    </BrowserRouter>
+    </LanguageProvider>
+  </BrowserRouter>
   );
 }
