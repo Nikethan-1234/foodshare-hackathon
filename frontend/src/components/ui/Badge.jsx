@@ -124,3 +124,39 @@ export function EventLeftoverBadge({ className = "" }) {
     </span>
   );
 }
+
+export function FoodCategoryBadge({ foodType, className = "" }) {
+  const isVeg = foodType === "VEG";
+  return (
+    <span
+      className={clsx(
+        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold border",
+        isVeg
+          ? "bg-green-50 text-green-800 border-green-300"
+          : "bg-red-50 text-red-800 border-red-300",
+        className
+      )}
+      title={isVeg ? "Vegetarian Food" : "Non-Vegetarian Food"}
+    >
+      <span className={clsx("h-1.5 w-1.5 rounded-full", isVeg ? "bg-green-600" : "bg-red-600")} />
+      {isVeg ? "Veg" : "Non-Veg"}
+    </span>
+  );
+}
+
+export function PrepStateBadge({ prepState, className = "" }) {
+  const isCooked = prepState === "COOKED";
+  return (
+    <span
+      className={clsx(
+        "inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium border",
+        isCooked
+          ? "bg-amber-50 text-amber-800 border-amber-200"
+          : "bg-blue-50 text-blue-800 border-blue-200",
+        className
+      )}
+    >
+      {isCooked ? "Cooked Meal" : "Packaged Goods"}
+    </span>
+  );
+}

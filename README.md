@@ -191,7 +191,18 @@ Predictable surplus from weekly operations (e.g. churches, canteens, hostels):
 
 ---
 
-## 8. Setup & Running Locally
+## 8. Listing Details, Photos & Category Tags (Phase 5)
+
+Enriched listing quality and transparency for recipients:
+- **Photo Uploads:** Donors can attach real food photos via multipart or base64 (enforces max 5MB size and format validation: JPEG, PNG, WEBP).
+- **Dietary & State Categorization:** Listings feature explicit badges for `VEG` / `NON_VEG` and `COOKED` / `PACKAGED`.
+- **Allergen Notes:** Free-form allergen note field for detailed ingredient warnings.
+- **Browse Filters:** Recipients can filter browse results by dietary tags (All, Veg Only, Non-Veg) and preparation state (All, Cooked, Packaged).
+- **Privacy Protection:** Donor phone number is strictly kept private and revealed **only after a request is accepted** (`status = ACCEPTED`).
+
+---
+
+## 9. Setup & Running Locally
 
 ### Prerequisites
 - **Python 3.10+**

@@ -45,6 +45,10 @@ export default function NewListingPage() {
     use_by: toDateTimeLocal(useByDefault),
     pickup_start: toDateTimeLocal(pickupStartDefault),
     pickup_end: toDateTimeLocal(pickupEndDefault),
+    category_food_type: "VEG",
+    category_prep_state: "COOKED",
+    allergen_notes: "",
+    image_url: "",
   });
 
   // Phase 2: Handling checklist (all 4 required)
@@ -144,10 +148,41 @@ export default function NewListingPage() {
     }
   };
 
-  const handleFileUpload = (e) => {
+  const [isPhotoUploading, setIsPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    // Check size <= 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError("Photo exceeds 5MB size limit. Please choose a smaller image.");
+      return;
+    }
+
+    // Check extension
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (!allowed.includes(file.type)) {
+      setPhotoError("Invalid image type. Please select JPEG, PNG, or WEBP.");
+      return;
+    }
+
+    setPhotoError("");
+    setIsPhotoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const res = await api.post("/listings/upload-photo", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setForm((prev) => ({ ...prev, image_url: res.data.image_url }));
+      toast({ message: "Photo uploaded successfully!", type: "success" });
       handleAiScan(null, file);
+    } catch (err) {
+      setPhotoError(err.response?.data?.error || "Failed to upload photo.");
+    } finally {
+      setIsPhotoUploading(false);
     }
   };
 
@@ -379,10 +414,23 @@ export default function NewListingPage() {
           </div>
           <label className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded border border-green-700 bg-green-600 text-white text-xs font-medium cursor-pointer hover:bg-green-700 transition-colors">
             <Camera className="h-3.5 w-3.5" />
-            <span>Scan Photo</span>
-            <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+            <span>{isPhotoUploading ? "Uploading Photo..." : "Upload Photo (Max 5MB)"}</span>
+            <input
+              type="file"
+              accept="image/png, image/jpeg, image/webp"
+              className="hidden"
+              onChange={handleFileUpload}
+              disabled={isPhotoUploading}
+            />
           </label>
         </div>
+
+        {photoError && (
+          <div className="mb-2 p-2 bg-red-50 border border-red-200 text-xs text-red-700 rounded flex items-center gap-1.5">
+            <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+            <span>{photoError}</span>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-1.5">
           <span className="text-xs text-grey-500 self-center mr-1">Try quick demo presets:</span>
@@ -446,12 +494,63 @@ export default function NewListingPage() {
                 />
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Select
+                  label="Dietary Category"
+                  value={form.category_food_type}
+                  onChange={handleChange("category_food_type")}
+                  options={[
+                    { value: "VEG", label: "🟢 Vegetarian (Veg)" },
+                    { value: "NON_VEG", label: "🔴 Non-Vegetarian (Non-Veg)" },
+                  ]}
+                  required
+                />
+                <Select
+                  label="Preparation State"
+                  value={form.category_prep_state}
+                  onChange={handleChange("category_prep_state")}
+                  options={[
+                    { value: "COOKED", label: "🍲 Freshly Cooked Meal" },
+                    { value: "PACKAGED", label: "📦 Packaged / Shelf-Stable Goods" },
+                  ]}
+                  required
+                />
+              </div>
+
+              <Input
+                label="Allergen Notes (Optional)"
+                value={form.allergen_notes}
+                onChange={handleChange("allergen_notes")}
+                placeholder="e.g. Contains nuts, dairy, mustard seeds, or gluten"
+                hint="Specify any known food allergens for recipient safety."
+              />
+
+              {form.image_url && (
+                <div className="flex items-center gap-3 p-2 bg-grey-50 border border-grey-200 rounded">
+                  <img
+                    src={form.image_url}
+                    alt="Listing Preview"
+                    className="h-16 w-16 object-cover rounded border border-grey-200"
+                  />
+                  <div className="text-xs text-grey-600">
+                    <p className="font-medium text-grey-800">Photo Attached</p>
+                    <button
+                      type="button"
+                      onClick={() => setForm((prev) => ({ ...prev, image_url: "" }))}
+                      className="text-red-600 hover:underline mt-1"
+                    >
+                      Remove photo
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <Textarea
-                label="Description & Allergens"
+                label="Description & Ingredients"
                 value={form.description}
                 onChange={handleChange("description")}
                 error={errors.description}
-                placeholder="List ingredients, dietary labels (Vegetarian, Halal, Vegan), or allergens."
+                placeholder="List ingredients, dietary labels (Vegetarian, Halal, Vegan), or packaging specifics."
                 hint="Mention if recipient must bring their own containers or carriers."
               />
             </div>

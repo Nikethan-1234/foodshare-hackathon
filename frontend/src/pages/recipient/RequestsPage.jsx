@@ -229,10 +229,14 @@ export default function RequestsPage() {
                           <MapPin className="h-3 w-3 text-grey-400 flex-shrink-0" />
                           <span className="truncate">{r.pickup_location}</span>
                         </div>
-                        {r.donor_phone && (
-                          <div className="flex items-center gap-1 text-grey-500 mt-0.5">
-                            <Phone className="h-3 w-3 text-grey-400 flex-shrink-0" />
+                        {r.donor_phone ? (
+                          <div className="flex items-center gap-1 text-green-700 font-medium mt-0.5">
+                            <Phone className="h-3 w-3 text-green-600 flex-shrink-0" />
                             <span>{r.donor_phone}</span>
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-grey-400 italic mt-0.5">
+                            🔒 Phone revealed upon acceptance
                           </div>
                         )}
                       </Td>
@@ -320,10 +324,14 @@ export default function RequestsPage() {
                       <MapPin className="h-3.5 w-3.5 text-grey-400 flex-shrink-0" />
                       <span className="truncate">{r.pickup_location}</span>
                     </div>
-                    {r.donor_phone && (
-                      <div className="flex items-center gap-1.5">
-                        <Phone className="h-3.5 w-3.5 text-grey-400 flex-shrink-0" />
+                    {r.donor_phone ? (
+                      <div className="flex items-center gap-1.5 text-green-700 font-medium">
+                        <Phone className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
                         <span>{r.donor_phone}</span>
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-grey-400 italic">
+                        🔒 Donor phone revealed upon request acceptance
                       </div>
                     )}
                   </div>

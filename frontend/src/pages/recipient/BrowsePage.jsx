@@ -6,7 +6,7 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input, Textarea } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
-import { StatusBadge, DonorTypeBadge, EventLeftoverBadge } from "../../components/ui/Badge";
+import { StatusBadge, DonorTypeBadge, EventLeftoverBadge, FoodCategoryBadge, PrepStateBadge } from "../../components/ui/Badge";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { ErrorState } from "../../components/ui/ErrorState";
@@ -14,7 +14,7 @@ import { PickupCountdown } from "../../components/ui/PickupCountdown";
 import { formatDateTime, formatTimeLeft } from "../../utils/format";
 import {
   Search, Package, Clock, MapPin, Building2, CheckCircle2,
-  Calendar, Eye, Send, ShieldAlert, Sparkles, Flag, Repeat
+  Calendar, Eye, Send, ShieldAlert, Sparkles, Flag, Repeat, Phone, AlertCircle
 } from "lucide-react";
 
 const UNIT_FILTERS = [
@@ -34,6 +34,8 @@ export default function BrowsePage() {
   const [upcomingRecurring, setUpcomingRecurring] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUnit, setSelectedUnit] = useState("ALL");
+  const [selectedFoodType, setSelectedFoodType] = useState("ALL"); // ALL, VEG, NON_VEG
+  const [selectedPrepState, setSelectedPrepState] = useState("ALL"); // ALL, COOKED, PACKAGED
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
@@ -58,9 +60,14 @@ export default function BrowsePage() {
     setIsLoading(true);
     setLoadError("");
     try {
-      const url = selectedUnit === "ALL"
-        ? "/listings/available"
-        : `/listings/available?unit=${selectedUnit}`;
+      const params = new URLSearchParams();
+      if (selectedUnit !== "ALL") params.append("unit", selectedUnit);
+      if (selectedFoodType !== "ALL") params.append("food_type", selectedFoodType);
+      if (selectedPrepState !== "ALL") params.append("prep_state", selectedPrepState);
+
+      const qs = params.toString();
+      const url = qs ? `/listings/available?${qs}` : "/listings/available";
+
       const [resListings, resUpcoming] = await Promise.all([
         api.get(url),
         api.get("/recurring/upcoming").catch(() => ({ data: { upcoming: [] } }))
@@ -76,7 +83,7 @@ export default function BrowsePage() {
 
   useEffect(() => {
     fetchAvailableListings();
-  }, [selectedUnit]);
+  }, [selectedUnit, selectedFoodType, selectedPrepState]);
 
   const handleOpenRequest = (listing) => {
     setRequestTarget(listing);
@@ -226,6 +233,67 @@ export default function BrowsePage() {
         </div>
       </div>
 
+      {/* Dietary and Prep State Category Filter Bar */}
+      <div className="flex flex-wrap items-center gap-2 mb-6 p-2.5 bg-grey-50 rounded-lg border border-grey-200 text-xs">
+        <span className="font-semibold text-grey-700 mr-1">Food Filters:</span>
+
+        {/* Veg / Non-Veg Pills */}
+        <div className="inline-flex rounded-md shadow-sm">
+          <button
+            onClick={() => setSelectedFoodType("ALL")}
+            className={`px-2.5 py-1 text-xs font-medium rounded-l border ${
+              selectedFoodType === "ALL" ? "bg-green-600 text-white border-green-600" : "bg-white text-grey-700 border-grey-300 hover:bg-grey-50"
+            }`}
+          >
+            All Diet
+          </button>
+          <button
+            onClick={() => setSelectedFoodType("VEG")}
+            className={`px-2.5 py-1 text-xs font-medium border-t border-b border-r ${
+              selectedFoodType === "VEG" ? "bg-green-700 text-white border-green-700" : "bg-white text-grey-700 border-grey-300 hover:bg-grey-50"
+            }`}
+          >
+            🟢 Veg Only
+          </button>
+          <button
+            onClick={() => setSelectedFoodType("NON_VEG")}
+            className={`px-2.5 py-1 text-xs font-medium rounded-r border-t border-b border-r ${
+              selectedFoodType === "NON_VEG" ? "bg-red-700 text-white border-red-700" : "bg-white text-grey-700 border-grey-300 hover:bg-grey-50"
+            }`}
+          >
+            🔴 Non-Veg
+          </button>
+        </div>
+
+        {/* Cooked / Packaged Pills */}
+        <div className="inline-flex rounded-md shadow-sm ml-2">
+          <button
+            onClick={() => setSelectedPrepState("ALL")}
+            className={`px-2.5 py-1 text-xs font-medium rounded-l border ${
+              selectedPrepState === "ALL" ? "bg-green-600 text-white border-green-600" : "bg-white text-grey-700 border-grey-300 hover:bg-grey-50"
+            }`}
+          >
+            All States
+          </button>
+          <button
+            onClick={() => setSelectedPrepState("COOKED")}
+            className={`px-2.5 py-1 text-xs font-medium border-t border-b border-r ${
+              selectedPrepState === "COOKED" ? "bg-amber-700 text-white border-amber-700" : "bg-white text-grey-700 border-grey-300 hover:bg-grey-50"
+            }`}
+          >
+            🍲 Cooked
+          </button>
+          <button
+            onClick={() => setSelectedPrepState("PACKAGED")}
+            className={`px-2.5 py-1 text-xs font-medium rounded-r border-t border-b border-r ${
+              selectedPrepState === "PACKAGED" ? "bg-blue-700 text-white border-blue-700" : "bg-white text-grey-700 border-grey-300 hover:bg-grey-50"
+            }`}
+          >
+            📦 Packaged
+          </button>
+        </div>
+      </div>
+
       {/* Upcoming Recurring Institutional Donations Section */}
       {upcomingRecurring.length > 0 && (
         <div className="mb-6">
@@ -318,10 +386,25 @@ export default function BrowsePage() {
                     <PickupCountdown pickupEnd={item.pickup_end} />
                   </div>
 
-                  {/* Food Title */}
-                  <h3 className="font-semibold text-base text-grey-900 leading-snug mb-1">
-                    {item.title}
-                  </h3>
+                  {/* Food Title & Badges */}
+                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                    <h3 className="font-semibold text-base text-grey-900 leading-snug">
+                      {item.title}
+                    </h3>
+                    <FoodCategoryBadge foodType={item.category_food_type} />
+                    <PrepStateBadge prepState={item.category_prep_state} />
+                  </div>
+
+                  {/* Photo Thumbnail if uploaded */}
+                  {item.image_url && (
+                    <div className="mb-2 rounded overflow-hidden border border-grey-200 h-36 bg-grey-100">
+                      <img
+                        src={item.image_url}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
 
                   {/* Description Preview */}
                   {item.description && (
@@ -518,7 +601,11 @@ export default function BrowsePage() {
           <div className="flex flex-col gap-4 text-sm">
             <div className="flex items-start justify-between border-b border-grey-200 pb-3">
               <div>
-                <h3 className="font-semibold text-base text-grey-900">{detailItem.title}</h3>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h3 className="font-semibold text-base text-grey-900">{detailItem.title}</h3>
+                  <FoodCategoryBadge foodType={detailItem.category_food_type} />
+                  <PrepStateBadge prepState={detailItem.category_prep_state} />
+                </div>
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-xs text-grey-500">Offered by {detailItem.donor_name}</p>
                   {detailItem.donor_type && (
@@ -534,12 +621,29 @@ export default function BrowsePage() {
               </span>
             </div>
 
+            {/* Photo Preview in Modal if present */}
+            {detailItem.image_url && (
+              <div className="rounded-lg overflow-hidden border border-grey-200 max-h-64 bg-grey-100 flex items-center justify-center">
+                <img
+                  src={detailItem.image_url}
+                  alt={detailItem.title}
+                  className="w-full h-full object-cover max-h-64"
+                />
+              </div>
+            )}
+
             {detailItem.description && (
               <div>
                 <h4 className="text-xs font-semibold text-grey-700 uppercase mb-1">Description & Ingredients</h4>
                 <p className="text-xs text-grey-700 bg-grey-50 p-3 rounded border border-grey-200 leading-relaxed">
                   {detailItem.description}
                 </p>
+              </div>
+            )}
+
+            {detailItem.allergen_notes && (
+              <div className="p-3 bg-amber-50 rounded border border-amber-200 text-xs text-amber-900">
+                <strong>Specific Allergen Notes from Donor:</strong> {detailItem.allergen_notes}
               </div>
             )}
 

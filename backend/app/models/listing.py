@@ -21,6 +21,11 @@ class Listing(db.Model):
     status = db.Column(db.String(20), default="AVAILABLE", nullable=False, index=True)
     allergens = db.Column(db.String(255), default="")
     dietary_tags = db.Column(db.String(255), default="")
+    # Phase 5: Categorization & details
+    category_food_type = db.Column(db.String(20), default="VEG", nullable=False)  # VEG, NON_VEG
+    category_prep_state = db.Column(db.String(20), default="COOKED", nullable=False)  # COOKED, PACKAGED
+    allergen_notes = db.Column(db.Text, default="")
+    image_url = db.Column(db.Text, default="")
     # Handling checklist (all required to be True)
     is_covered = db.Column(db.Boolean, default=True, nullable=False)
     is_stored_properly = db.Column(db.Boolean, default=True, nullable=False)
@@ -53,6 +58,10 @@ class Listing(db.Model):
             "status": self.status,
             "allergens": [a.strip() for a in self.allergens.split(",") if a.strip()] if self.allergens else [],
             "dietary_tags": [t.strip() for t in self.dietary_tags.split(",") if t.strip()] if self.dietary_tags else [],
+            "category_food_type": self.category_food_type or "VEG",
+            "category_prep_state": self.category_prep_state or "COOKED",
+            "allergen_notes": self.allergen_notes or "",
+            "image_url": self.image_url or "",
             "handling_checklist": {
                 "covered": self.is_covered,
                 "stored_properly": self.is_stored_properly,

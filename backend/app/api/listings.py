@@ -114,6 +114,10 @@ def validate_listing_payload(data, is_create=True):
         "is_not_reheated": not_reheated,
         "is_packaged_cleanly": packaged_cleanly,
         "is_event_leftover": bool(data.get("is_event_leftover", False)),
+        "category_food_type": (data.get("category_food_type") or "VEG").strip().upper(),
+        "category_prep_state": (data.get("category_prep_state") or "COOKED").strip().upper(),
+        "allergen_notes": data.get("allergen_notes", "").strip(),
+        "image_url": data.get("image_url", "").strip(),
     }
 
 
@@ -187,6 +191,10 @@ def create_listing():
         is_not_reheated=parsed.get("is_not_reheated", True),
         is_packaged_cleanly=parsed.get("is_packaged_cleanly", True),
         is_event_leftover=parsed.get("is_event_leftover", False),
+        category_food_type=parsed.get("category_food_type", "VEG"),
+        category_prep_state=parsed.get("category_prep_state", "COOKED"),
+        allergen_notes=parsed.get("allergen_notes", ""),
+        image_url=parsed.get("image_url", ""),
     )
     db.session.add(listing)
     db.session.flush()
@@ -238,6 +246,8 @@ def get_available_listings():
     user_id = int(get_jwt_identity())
     q = request.args.get("q", "").strip().lower()
     unit = request.args.get("unit")
+    food_type = request.args.get("food_type")  # VEG, NON_VEG
+    prep_state = request.args.get("prep_state")  # COOKED, PACKAGED
 
     now = datetime.utcnow()
     query = Listing.query.filter(
@@ -247,6 +257,10 @@ def get_available_listings():
     )
     if unit:
         query = query.filter_by(unit=unit)
+    if food_type and food_type.upper() in ["VEG", "NON_VEG"]:
+        query = query.filter_by(category_food_type=food_type.upper())
+    if prep_state and prep_state.upper() in ["COOKED", "PACKAGED"]:
+        query = query.filter_by(category_prep_state=prep_state.upper())
 
     listings = query.order_by(Listing.pickup_start.asc()).all()
 
@@ -399,3 +413,55 @@ def cancel_listing(listing_id):
 
     db.session.commit()
     return jsonify({"listing": listing.to_dict(), "message": "Listing cancelled successfully"}), 200
+
+
+@listings_bp.route("/upload-photo", methods=["POST"])
+@role_required("donor")
+def upload_listing_photo():
+    """
+    Phase 5: Secure photo upload endpoint for listings.
+    Accepts multipart/form-data or JSON base64.
+    Limits: max 5MB, types JPEG, PNG, WEBP.
+    Stores and returns a data URL or safe file reference.
+    """
+    import base64
+
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+    MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+
+    # Check for multipart file
+    if "photo" in request.files:
+        file = request.files["photo"]
+        filename = file.filename or ""
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        if ext not in ALLOWED_EXTENSIONS:
+            return jsonify({"error": f"Invalid file type. Allowed formats: {', '.join(ALLOWED_EXTENSIONS)}"}), 422
+
+        file_bytes = file.read()
+        if len(file_bytes) > MAX_BYTES:
+            return jsonify({"error": "File size exceeds 5MB limit."}), 422
+
+        mime = f"image/{'jpeg' if ext in ['jpg', 'jpeg'] else ext}"
+        b64_str = base64.b64encode(file_bytes).decode("utf-8")
+        data_url = f"data:{mime};base64,{b64_str}"
+        return jsonify({"image_url": data_url, "size": len(file_bytes), "format": ext}), 200
+
+    # Check for JSON base64 payload
+    data = request.get_json() or {}
+    data_url = data.get("image_data", "").strip()
+    if data_url.startswith("data:image/"):
+        # Validate mime
+        header, b64_data = data_url.split(",", 1) if "," in data_url else ("", "")
+        mime_type = header.split(";")[0].replace("data:", "")
+        allowed_mimes = ["image/jpeg", "image/png", "image/webp", "image/jpg"]
+        if mime_type not in allowed_mimes:
+            return jsonify({"error": f"Invalid image MIME type: {mime_type}. Allowed: JPEG, PNG, WEBP"}), 422
+
+        raw_bytes = base64.b64decode(b64_data)
+        if len(raw_bytes) > MAX_BYTES:
+            return jsonify({"error": "Image size exceeds 5MB limit."}), 422
+
+        return jsonify({"image_url": data_url, "size": len(raw_bytes)}), 200
+
+    return jsonify({"error": "No valid photo provided. Send multipart 'photo' or JSON 'image_data'."}), 400
+

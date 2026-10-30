@@ -21,6 +21,10 @@ class Request(db.Model):
     def to_dict(self):
         listing = self.listing
         donor_profile = listing.donor.profile if listing and listing.donor else None
+        # Phase 5: Reveal donor phone ONLY after request is ACCEPTED or COMPLETED
+        reveal_phone = self.status in ["ACCEPTED", "COMPLETED"]
+        donor_phone = donor_profile.phone if (donor_profile and reveal_phone) else None
+
         return {
             "id": self.id,
             "listing_id": self.listing_id,
@@ -28,7 +32,8 @@ class Request(db.Model):
             "listing_status": listing.status if listing else None,
             "unit": listing.unit if listing else "servings",
             "donor_name": donor_profile.organization_name if donor_profile else None,
-            "donor_phone": donor_profile.phone if donor_profile else None,
+            "donor_phone": donor_phone,
+            "donor_phone_revealed": reveal_phone,
             "pickup_location": listing.pickup_location if listing else None,
             "pickup_start": listing.pickup_start.isoformat() if listing and listing.pickup_start else None,
             "pickup_end": listing.pickup_end.isoformat() if listing and listing.pickup_end else None,
